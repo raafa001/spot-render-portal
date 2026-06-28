@@ -27,3 +27,7 @@ npm run dev
 
 ### Kubernetes
 - `k8s/rollout.yaml`, `k8s/hpa.yaml`, `k8s/services.yaml`, `k8s/servicemonitor.yaml` com probes e annotations WAF/TLS.
+
+### Render lists (opcional)
+- O formulário possui um campo opcional para anexar planilhas `render-list*.csv/xlsx`. Essas planilhas não devem ser commitadas; o portal apenas envia para a API que as salva em um bucket privado.  
+- Use esse campo para atualizar filas de renderização sem expor os dados.
