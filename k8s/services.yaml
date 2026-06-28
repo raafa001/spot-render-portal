@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: spot-render-portal-stable
+  namespace: spot-render
+spec:
+  selector:
+    app: spot-render-portal
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spot-render-portal-canary
+  namespace: spot-render
+spec:
+  selector:
+    app: spot-render-portal
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
