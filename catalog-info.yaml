@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: spot-render-portal
+  description: Next.js web portal for Spot Render uploads and tracking.
+  tags:
+    - react
+    - nextjs
+spec:
+  type: website
+  lifecycle: experimental
+  owner: group:spot-render-team
+  system: spot-render
