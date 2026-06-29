@@ -69,6 +69,6 @@ docs/
 > **PT-BR:** Gere e publique via TechDocs CLI: `techdocs-cli generate --source-dir . --output-dir site`.  
 > **EN:** Generate/publish via TechDocs CLI: `techdocs-cli generate --source-dir . --output-dir site`.
 
-## 10. Roadmap – ESLint CLI
-> **PT-BR:** `next lint` permanece temporariamente para compatibilidade, mas devemos migrar para o ESLint CLI oficial antes do Next 16. Passos sugeridos: (1) executar `npx @next/codemod next-lint-to-eslint-cli`, (2) ajustar scripts para `"lint": "eslint ."`, (3) garantir que GitHub Actions use `eslint`.  
-> **EN:** `next lint` stays temporarily for compatibility, but we must migrate to the official ESLint CLI before Next 16. Suggested steps: (1) run `npx @next/codemod next-lint-to-eslint-cli`, (2) update scripts to `"lint": "eslint ."`, (3) ensure GitHub Actions runs `eslint`.
+## 10. ESLint CLI oficial
+> **PT-BR:** O projeto já usa `eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0` no `package.json`, com `extends: ["next/core-web-vitals"]`. Execução local e no CI devem chamar `npm run lint`.  
+> **EN:** The project now runs `eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0` (see `package.json`), extending `next/core-web-vitals`. Local and CI pipelines should call `npm run lint`.
