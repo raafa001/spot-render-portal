@@ -11,14 +11,22 @@ npm install
 npm run dev
 ```
 
+### Variáveis de ambiente
+
+- `NEXT_PUBLIC_API_URL`: endpoint público da Spot Render API (ex.: `http://spot-render-api.spot-render.svc.cluster.local:8000` em clusters locais ou `https://api.render.company.com` em produção). As páginas `/` e `/status` consomem esse valor para buscar jobs e o health check.  
+- Após atualizar a variável em staging/produção, execute `npm run build` (ou pipeline correspondente) para gerar os assets estáticos e publicar a nova rota `/status`.
+
 ### Estrutura
 
 ```
+src/
   pages/
     index.tsx
+    status.tsx
   components/
     UploadForm.tsx
     JobsTable.tsx
+    HealthBanner.tsx
 ```
 
 ### Pipelines
@@ -34,10 +42,12 @@ npm run dev
 - GitHub Actions (lint/test → Sonar → Docker/Trivy → Rollout)  
 - Rollout canário + HPA em `spot-render` namespace.
 
-### Uploads e Render Lists
-- Formulário aceita `file`, `project`, `variation`, `artist` e campo opcional **`renderlist`** (CSV/XLSX) por projeto.  
-- Flag “Esta é a nova render list padrão” exige autenticação (`username=admin`, `password=admin` em ambientes de teste) e envia um POST dedicado à API.  
-- Os arquivos `render-list*.csv|tsv|xlsx` não devem ser versionados; carregue-os apenas pelo portal ou CLI.
+### Uploads, notificações e saúde
+- Formulário aceita `file`, `project`, `variation`, `artist`, campo opcional **`renderlist`** e flags “correção”, “Desejo receber e-mail” e “Sempre receber e-mail”. O e-mail pode ser salvo em `localStorage` para não ser digitado a cada projeto.  
+- A seleção de projetos é carregada dinamicamente via `GET /projects`, garantindo que cada upload vá para o bucket/prefixo correto.  
+- Após o envio, o formulário mostra as URIs de entrada/saída (`s3://...` ou `file://...`) e o bucket/repositório associado.  
+- A home exibe um banner verde/vermelho (“Ambiente está funcionando corretamente!” / “Ambiente com falha...”) baseado em `GET /health/summary`, com link para a nova página `/status`.  
+- A tabela de jobs mostra progresso (%), ETA, estágio textual (“Concluindo”, “Concluída”), caminhos de entrada/saída, bucket e repositório.
 
 ### Métricas & Alertas
 - O portal envia eventos de Web Vitals para a API (`render_requests_total` com `source="portal"`).  
