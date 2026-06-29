@@ -1,14 +1,14 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
-  name: spot-render-portal
+  name: spot-render-web
   namespace: spot-render
 spec:
   replicas: 2
   strategy:
     canary:
-      canaryService: spot-render-portal-canary
-      stableService: spot-render-portal-stable
+      canaryService: spot-render-web-canary
+      stableService: spot-render-web-stable
       steps:
         - setWeight: 10
         - pause: {duration: 120}
@@ -16,15 +16,15 @@ spec:
         - pause: {duration: 180}
   selector:
     matchLabels:
-      app: spot-render-portal
+      app: spot-render-web
   template:
     metadata:
       labels:
-        app: spot-render-portal
+        app: spot-render-web
     spec:
       containers:
-        - name: portal
-          image: 000000000000.dkr.ecr.us-east-1.amazonaws.com/spot-render-portal:latest
+        - name: spot-render-web
+          image: 000000000000.dkr.ecr.us-east-1.amazonaws.com/spot-render-web:sha-PLACEHOLDER
           ports:
             - containerPort: 3000
           readinessProbe:

@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: spot-render-portal-stable
+  name: spot-render-web-stable
   namespace: spot-render
 spec:
   selector:
-    app: spot-render-portal
+    app: spot-render-web
   ports:
     - name: http
       port: 80
@@ -14,11 +14,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: spot-render-portal-canary
+  name: spot-render-web-canary
   namespace: spot-render
 spec:
   selector:
-    app: spot-render-portal
+    app: spot-render-web
   ports:
     - name: http
       port: 80
