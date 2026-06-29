@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import axios from "axios";
 
 interface HealthComponent {
@@ -38,32 +39,88 @@ export default function HealthBanner() {
   const healthy = health.overall === "healthy";
 
   return (
-    <>
-      <div className={`health-banner ${healthy ? "ok" : "fail"}`}>
-        <span>{healthy ? "Ambiente está funcionando corretamente!" : "Ambiente com falha e/ou em manutenção"}</span>
-        <a href="/status">Ver status detalhado</a>
+    <div className={`health-banner ${healthy ? "ok" : "fail"}`}>
+      <div className="pulse" />
+      <div className="copy">
+        <strong>{healthy ? "Plataforma saudável" : "Atenção: ambiente degradado"}</strong>
+        <span>{healthy ? "API, portal e workers respondendo normalmente" : "Estamos analisando instabilidades nos componentes"}</span>
       </div>
+      <Link href="/status">Ver status</Link>
       <style jsx>{`
         .health-banner {
-          display: flex;
-          justify-content: space-between;
+          display: inline-flex;
           align-items: center;
-          padding: 0.75rem 1rem;
-          border-radius: 8px;
-          margin: 1rem 0;
+          gap: 0.85rem;
+          padding: 0.85rem 1.2rem;
+          border-radius: 999px;
+          font-size: 0.9rem;
+          box-shadow: 0 15px 30px rgba(15, 23, 42, 0.08);
+        }
+        .pulse {
+          width: 10px;
+          height: 10px;
+          border-radius: 999px;
+          background: currentColor;
+          position: relative;
+        }
+        .pulse::after {
+          content: "";
+          position: absolute;
+          inset: -6px;
+          border: 2px solid currentColor;
+          border-radius: 999px;
+          opacity: 0.4;
+          animation: pulse 1.8s infinite;
+        }
+        @keyframes pulse {
+          0% {
+            transform: scale(0.4);
+            opacity: 0.8;
+          }
+          100% {
+            transform: scale(1.4);
+            opacity: 0;
+          }
+        }
+        .copy {
+          display: flex;
+          flex-direction: column;
+          gap: 0.1rem;
+        }
+        .copy strong {
+          font-size: 0.95rem;
+        }
+        .copy span {
+          color: inherit;
+          opacity: 0.8;
+          font-size: 0.85rem;
         }
         .health-banner.ok {
-          background: #e6ffed;
-          color: #03543f;
+          background: rgba(34, 197, 94, 0.15);
+          color: #15803d;
         }
         .health-banner.fail {
-          background: #fde8e8;
-          color: #981b1b;
+          background: rgba(248, 113, 113, 0.15);
+          color: #b91c1c;
         }
-        .health-banner a {
+        a {
+          margin-left: auto;
           font-weight: 600;
+          color: inherit;
+          text-decoration: none;
+        }
+        @media (max-width: 640px) {
+          .health-banner {
+            flex-direction: column;
+            border-radius: 18px;
+            align-items: flex-start;
+            width: 100%;
+          }
+          a {
+            margin-left: 0;
+          }
         }
       `}</style>
-    </>
+    </div>
   );
 }

@@ -121,59 +121,76 @@ export default function UploadForm() {
   return (
     <section>
       <form onSubmit={handleSubmit} className="upload-form">
-        <div>
-          <label>Arquivo principal</label>
-          <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-        </div>
-        <div>
-          <label>Projeto</label>
-          <select value={project} onChange={(e) => setProject(e.target.value)}>
-            {projects.map((p) => (
-              <option key={p.name} value={p.name}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-          {selectedProject?.description && <small>{selectedProject.description}</small>}
-        </div>
-        <div>
-          <label>Variação</label>
-          <input value={variation} onChange={(e) => setVariation(e.target.value)} placeholder="Variação" />
-        </div>
-        <div>
-          <label>Artista</label>
-          <input value={artist} onChange={(e) => setArtist(e.target.value)} placeholder="Artista" />
-        </div>
-        <div>
-          <label>Email para aviso</label>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nome@estudio.com" />
-          <label className="inline">
-            <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} /> Desejo receber um aviso no email quando minha tarefa for concluída
+        <div className="form-grid">
+          <label className="field">
+            <span>Arquivo principal</span>
+            <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </label>
-          <label className="inline">
-            <input type="checkbox" checked={alwaysNotify} onChange={(e) => setAlwaysNotify(e.target.checked)} /> Sempre receber email (usa este endereço automaticamente)
+          <label className="field">
+            <span>Projeto</span>
+            <select value={project} onChange={(e) => setProject(e.target.value)}>
+              {projects.map((p) => (
+                <option key={p.name} value={p.name}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            {selectedProject?.description && <small>{selectedProject.description}</small>}
           </label>
-        </div>
-        <div>
-          <label className="inline">
-            <input type="checkbox" checked={isCorrection} onChange={(e) => setIsCorrection(e.target.checked)} /> Esta submissão é uma correção
+          <label className="field">
+            <span>Variação</span>
+            <input value={variation} onChange={(e) => setVariation(e.target.value)} placeholder="Variação" />
+          </label>
+          <label className="field">
+            <span>Artista</span>
+            <input value={artist} onChange={(e) => setArtist(e.target.value)} placeholder="Artista" />
+          </label>
+          <label className="field">
+            <span>Email para aviso</span>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nome@estudio.com" />
+          </label>
+          <label className="field">
+            <span>Render list (opcional)</span>
+            <input type="file" onChange={(e) => setRenderList(e.target.files?.[0] ?? null)} />
           </label>
         </div>
-        <label>
-          Render list (opcional)
-          <input type="file" onChange={(e) => setRenderList(e.target.files?.[0] ?? null)} />
-        </label>
-        <label className="inline">
-          <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} /> Atualizar render list padrão (admin)
-        </label>
-        {isDefault && (
-          <div className="admin-block">
-            <input value={adminUser} onChange={(e) => setAdminUser(e.target.value)} placeholder="Usuário" />
-            <input value={adminPass} onChange={(e) => setAdminPass(e.target.value)} type="password" placeholder="Senha" />
+
+        <div className="preferences">
+          <p>Preferências de notificação</p>
+          <div className="checkbox-grid">
+            <label className="checkbox">
+              <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
+              Receber aviso quando o job finalizar
+            </label>
+            <label className="checkbox">
+              <input type="checkbox" checked={alwaysNotify} onChange={(e) => setAlwaysNotify(e.target.checked)} />
+              Lembrar este email para próximos envios
+            </label>
+            <label className="checkbox">
+              <input type="checkbox" checked={isCorrection} onChange={(e) => setIsCorrection(e.target.checked)} />
+              Esta submissão é uma correção
+            </label>
           </div>
-        )}
+        </div>
+
+        <div className="default-card">
+          <div>
+            <p className="default-title">Render list padrão</p>
+            <span>Opcional para usuários admin. Atualiza a lista que o time inteiro consome.</span>
+          </div>
+          <label className="checkbox">
+            <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} /> Atualizar render list padrão
+          </label>
+          {isDefault && (
+            <div className="admin-block">
+              <input value={adminUser} onChange={(e) => setAdminUser(e.target.value)} placeholder="Usuário" />
+              <input value={adminPass} onChange={(e) => setAdminPass(e.target.value)} type="password" placeholder="Senha" />
+            </div>
+          )}
+        </div>
+
         <button type="submit" disabled={submitting}>
-          {submitting ? "Enviando..." : "Enviar"}
+          {submitting ? "Enviando..." : "Enviar job"}
         </button>
       </form>
 
@@ -195,51 +212,137 @@ export default function UploadForm() {
       )}
       <style jsx>{`
         .upload-form {
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
+        }
+
+        .form-grid {
           display: grid;
-          gap: 0.75rem;
-          padding: 1rem;
-          border: 1px solid #e5e7eb;
-          border-radius: 12px;
-          margin-bottom: 1.5rem;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 1rem;
         }
-        .upload-form label {
+
+        .field {
+          display: flex;
+          flex-direction: column;
+          gap: 0.4rem;
           font-weight: 600;
-          display: block;
+          color: #0f172a;
         }
-        .upload-form input,
-        .upload-form select {
-          width: 100%;
-          padding: 0.5rem;
-          border-radius: 6px;
-          border: 1px solid #cbd5f5;
-        }
-        .upload-form .inline {
+
+        .field small {
+          font-size: 0.8rem;
+          color: #64748b;
           font-weight: 400;
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
         }
-        .upload-result {
-          border: 1px solid #d1fae5;
-          padding: 1rem;
+
+        input,
+        select {
+          width: 100%;
+          padding: 0.65rem 0.85rem;
           border-radius: 12px;
-          background: #ecfdf5;
+          border: 1px solid #d9e3f5;
+          background: #f8fafc;
         }
-        .admin-block {
+
+        input[type="file"] {
+          padding: 0.4rem;
+          background: #fff;
+        }
+
+        .preferences {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 1rem;
+        }
+
+        .preferences p {
+          margin: 0 0 0.75rem;
+          font-weight: 600;
+          color: #0f172a;
+        }
+
+        .checkbox-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 0.75rem;
+        }
+
+        .checkbox {
           display: flex;
           gap: 0.5rem;
+          align-items: flex-start;
+          font-weight: 500;
+          color: #475569;
         }
+
+        .checkbox input {
+          width: auto;
+        }
+
+        .default-card {
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 1rem;
+          background: #fff;
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+
+        .default-title {
+          margin: 0;
+          font-weight: 600;
+          color: #0f172a;
+        }
+
+        .default-card span {
+          color: #64748b;
+          font-size: 0.9rem;
+        }
+
+        .admin-block {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 0.75rem;
+        }
+
         button {
-          background: #2563eb;
-          color: #fff;
+          align-self: flex-start;
+          background: linear-gradient(90deg, #2563eb, #7c3aed);
+          color: white;
           border: none;
-          padding: 0.75rem 1.5rem;
-          border-radius: 8px;
+          padding: 0.75rem 1.75rem;
+          border-radius: 999px;
+          font-weight: 600;
           cursor: pointer;
+          box-shadow: 0 15px 35px rgba(37, 99, 235, 0.25);
         }
+
         button[disabled] {
           opacity: 0.6;
           cursor: wait;
+          box-shadow: none;
+        }
+
+        .upload-result {
+          margin-top: 1.25rem;
+          border-radius: 18px;
+          border: 1px solid #bbf7d0;
+          background: #f0fdf4;
+          padding: 1.25rem;
+        }
+
+        .upload-result h3 {
+          margin-top: 0;
+        }
+
+        code {
+          background: #e2e8f0;
+          padding: 0.15rem 0.35rem;
+          border-radius: 6px;
         }
       `}</style>
     </section>
