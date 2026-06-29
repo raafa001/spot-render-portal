@@ -35,7 +35,6 @@ export default function UploadForm() {
   const [notify, setNotify] = useState(false);
   const [alwaysNotify, setAlwaysNotify] = useState(false);
   const [isCorrection, setIsCorrection] = useState(false);
-  const [isDefault, setIsDefault] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [lastJob, setLastJob] = useState<JobResponse | null>(null);
 
@@ -83,7 +82,7 @@ export default function UploadForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!files.length && !isDefault) {
+    if (!files.length) {
       alert("Selecione pelo menos um arquivo renderizável (.max, .fbx, etc.)");
       return;
     }
@@ -99,15 +98,6 @@ export default function UploadForm() {
 
     setSubmitting(true);
     try {
-      if (isDefault) {
-        const form = new FormData();
-        form.append("renderlist", renderList);
-        form.append("project", project);
-        await axios.post(`${api}/uploads/renderlists/default`, form);
-        alert("Render list padrão atualizada");
-        return;
-      }
-
       const form = new FormData();
       files.forEach((scene, index) => {
         form.append("files", scene);
@@ -175,7 +165,8 @@ export default function UploadForm() {
           </label>
           <label className="field">
             <span>Render list (obrigatória)</span>
-            <input type="file" required onChange={(e) => setRenderList(e.target.files?.[0] ?? null)} />
+            <input type="file" accept=".csv,.xlsx" required onChange={(e) => setRenderList(e.target.files?.[0] ?? null)} />
+            <small>Somente CSV ou XLSX.</small>
           </label>
         </div>
 
@@ -195,16 +186,6 @@ export default function UploadForm() {
               Esta submissão é uma correção
             </label>
           </div>
-        </div>
-
-        <div className="default-card">
-          <div>
-            <p className="default-title">Render list padrão</p>
-            <span>Atualize a lista usada como referência global para este projeto.</span>
-          </div>
-          <label className="checkbox">
-            <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} /> Atualizar render list padrão
-          </label>
         </div>
 
         <button type="submit" disabled={submitting}>
@@ -298,27 +279,6 @@ export default function UploadForm() {
 
         .checkbox input {
           width: auto;
-        }
-
-        .default-card {
-          border: 1px solid #e2e8f0;
-          border-radius: 16px;
-          padding: 1rem;
-          background: #fff;
-          display: flex;
-          flex-direction: column;
-          gap: 0.75rem;
-        }
-
-        .default-title {
-          margin: 0;
-          font-weight: 600;
-          color: #0f172a;
-        }
-
-        .default-card span {
-          color: #64748b;
-          font-size: 0.9rem;
         }
 
         .file-chips {

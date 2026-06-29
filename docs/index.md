@@ -44,13 +44,13 @@ docs/
 ## 5. Campos do formulário
 > **PT-BR:**
 > - `Arquivos de cena` suporta múltiplos uploads simultâneos, limitados a extensões renderizáveis (`.max`, `.fbx`, `.obj`, `.blend`, `.usd`, `.abc`, `.ma`, `.mb`, `.c4d`). Arquivos fora dessa lista são ignorados com aviso.
-> - `Render list` agora é obrigatória em todos os envios, garantindo que cada projeto especifique suas prioridades.
-> - O toggle “Atualizar render list padrão” continua disponível, mas não exige mais usuário/senha – basta marcar e enviar o CSV/XLSX correspondente.
+> - `Render list` agora é obrigatória em todos os envios, garantindo que cada projeto especifique suas prioridades; apenas arquivos **CSV ou XLSX** são aceitos.
+> - A lista global do projeto é derivada automaticamente da render list enviada em cada job — não existe mais o toggle “Atualizar render list padrão”.
 > - Preferências de notificação e flag de correção permanecem iguais, com persistência via `localStorage`.
 > **EN:**
 > - `Scene files` accepts multiple uploads at once, restricted to renderable extensions (`.max`, `.fbx`, `.obj`, `.blend`, `.usd`, `.abc`, `.ma`, `.mb`, `.c4d`). Unsupported files are skipped with a warning.
-> - `Render list` is now required for every submission so each project defines its own priorities.
-> - The “Update default render list” toggle is still available but no longer requires username/password—just check it and upload the CSV/XLSX.
+> - `Render list` is now required for every submission so each project defines its own priorities; only **CSV or XLSX** files are accepted.
+> - The project's global list is automatically derived from the render list attached to each job—there is no longer an “Update default render list” toggle.
 > - Notification preferences and correction flag keep the same behavior (persisted via `localStorage`).
 
 ## 6. Status e monitoração
