@@ -42,18 +42,30 @@ docs/
 > **EN:** Set `NEXT_PUBLIC_API_URL` to the backend (local/cloud) before `npm run build`. Other envs follow `process.env.NEXT_PUBLIC_*`.
 
 ## 5. Campos do formulário
-> **PT-BR:** Uploads aceitam arquivo principal + render list opcional, campos de `project/variation/artist`, flags de correção e notificações que persistem em `localStorage`. Admins podem atualizar a render list padrão com usuário/senha.  
-> **EN:** Uploads accept the main file + optional render list, `project/variation/artist` fields, correction + notification flags persisted via `localStorage`. Admins may update the default render list with username/password.
+> **PT-BR:**
+> - `Arquivos de cena` suporta múltiplos uploads simultâneos, limitados a extensões renderizáveis (`.max`, `.fbx`, `.obj`, `.blend`, `.usd`, `.abc`, `.ma`, `.mb`, `.c4d`). Arquivos fora dessa lista são ignorados com aviso.
+> - `Render list` agora é obrigatória em todos os envios, garantindo que cada projeto especifique suas prioridades.
+> - O toggle “Atualizar render list padrão” continua disponível, mas não exige mais usuário/senha – basta marcar e enviar o CSV/XLSX correspondente.
+> - Preferências de notificação e flag de correção permanecem iguais, com persistência via `localStorage`.
+> **EN:**
+> - `Scene files` accepts multiple uploads at once, restricted to renderable extensions (`.max`, `.fbx`, `.obj`, `.blend`, `.usd`, `.abc`, `.ma`, `.mb`, `.c4d`). Unsupported files are skipped with a warning.
+> - `Render list` is now required for every submission so each project defines its own priorities.
+> - The “Update default render list” toggle is still available but no longer requires username/password—just check it and upload the CSV/XLSX.
+> - Notification preferences and correction flag keep the same behavior (persisted via `localStorage`).
 
 ## 6. Status e monitoração
 > **PT-BR:** `HealthBanner` consome `GET /health/summary` a cada 20 s; `/status` detalha componentes. `JobsTable` consulta `GET /jobs` a cada 15 s e mostra progresso com barras + cards responsivos, incluindo `input_uri/output_uri`.  
 > **EN:** `HealthBanner` polls `GET /health/summary` every 20 s; `/status` expands each component. `JobsTable` polls `GET /jobs` every 15 s with progress bars + responsive cards, including `input_uri/output_uri`.
 
-## 7. Alertas e observabilidade
+## 7. Formato das saídas
+> **PT-BR:** O backend padroniza todas as imagens exportadas em **PNG**, independentemente do arquivo de origem. A UI destaca essa expectativa nas dicas para evitar dúvidas com outros formatos.  
+> **EN:** The backend standardizes every rendered image as **PNG**, regardless of the source asset. The UI highlights this expectation in the tips to avoid confusion with other formats.
+
+## 8. Alertas e observabilidade
 > **PT-BR:** Canário monitora erro/latência via regras Prometheus do repo `spot-render-observability`. Ajustes: editar `prometheus/alerts/*.yaml` e dashboards `grafana/dashboards/*.yaml`.  
 > **EN:** Canary monitors error/latency via Prometheus rules in `spot-render-observability`. To tweak, edit `prometheus/alerts/*.yaml` and dashboards under `grafana/dashboards/*.yaml`.
 
-## 8. Teste local
+## 9. Teste local
 > **PT-BR:**
 > 1. `npm install && npm run dev` para hot reload.
 > 2. Para E2E, use `spot-render-teste-local` (namespaces `spot-render`, `rendering`, `monitoring`).
@@ -65,10 +77,10 @@ docs/
 > 3. Set `NEXT_PUBLIC_API_URL=http://spot-render-api.spot-render.svc.cluster.local:8000` or point to `spot-render.local` ingress.
 > 4. PVC `/tmp/spot-render-storage/shared` keeps uploads across restarts.
 
-## 9. TechDocs
+## 10. TechDocs
 > **PT-BR:** Gere e publique via TechDocs CLI: `techdocs-cli generate --source-dir . --output-dir site`.  
 > **EN:** Generate/publish via TechDocs CLI: `techdocs-cli generate --source-dir . --output-dir site`.
 
-## 10. ESLint CLI oficial
+## 11. ESLint CLI oficial
 > **PT-BR:** O projeto já usa `eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0` no `package.json`, com `extends: ["next/core-web-vitals"]`. Execução local e no CI devem chamar `npm run lint`.  
 > **EN:** The project now runs `eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0` (see `package.json`), extending `next/core-web-vitals`. Local and CI pipelines should call `npm run lint`.

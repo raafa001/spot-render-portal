@@ -22,9 +22,10 @@ interface JobResponse {
 
 const EMAIL_PREF_KEY = "spotrenderAlwaysNotify";
 const EMAIL_VALUE_KEY = "spotrenderDefaultEmail";
+const RENDERABLE_EXTENSIONS = [".max", ".fbx", ".obj", ".blend", ".usd", ".abc", ".ma", ".mb", ".c4d"];
 
 export default function UploadForm() {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [renderList, setRenderList] = useState<File | null>(null);
   const [projects, setProjects] = useState<ProjectRoute[]>([]);
   const [project, setProject] = useState("demo");
@@ -35,8 +36,6 @@ export default function UploadForm() {
   const [alwaysNotify, setAlwaysNotify] = useState(false);
   const [isCorrection, setIsCorrection] = useState(false);
   const [isDefault, setIsDefault] = useState(false);
-  const [adminUser, setAdminUser] = useState("admin");
-  const [adminPass, setAdminPass] = useState("admin");
   const [submitting, setSubmitting] = useState(false);
   const [lastJob, setLastJob] = useState<JobResponse | null>(null);
 
@@ -69,10 +68,27 @@ export default function UploadForm() {
     }
   }, [alwaysNotify, email]);
 
+  const acceptString = RENDERABLE_EXTENSIONS.join(",");
+
+  function sanitizeFiles(list: FileList | null) {
+    if (!list) return [];
+    const selected = Array.from(list);
+    const accepted = selected.filter((item) => RENDERABLE_EXTENSIONS.some((ext) => item.name.toLowerCase().endsWith(ext)));
+    if (accepted.length !== selected.length) {
+      const rejected = selected.filter((item) => !accepted.includes(item));
+      alert(`Alguns arquivos foram ignorados por não terem extensões suportadas: ${rejected.map((f) => f.name).join(", ")}`);
+    }
+    return accepted;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!file && !isDefault) {
-      alert("Selecione um arquivo principal");
+    if (!files.length && !isDefault) {
+      alert("Selecione pelo menos um arquivo renderizável (.max, .fbx, etc.)");
+      return;
+    }
+    if (!renderList) {
+      alert("Anexe uma render list (obrigatória)");
       return;
     }
     const api = process.env.NEXT_PUBLIC_API_URL;
@@ -84,21 +100,21 @@ export default function UploadForm() {
     setSubmitting(true);
     try {
       if (isDefault) {
-        if (!renderList) {
-          alert("Escolha uma render list para torná-la padrão");
-          return;
-        }
         const form = new FormData();
         form.append("renderlist", renderList);
-        form.append("username", adminUser);
-        form.append("password", adminPass);
+        form.append("project", project);
         await axios.post(`${api}/uploads/renderlists/default`, form);
         alert("Render list padrão atualizada");
         return;
       }
 
       const form = new FormData();
-      if (file) form.append("file", file);
+      files.forEach((scene, index) => {
+        form.append("files", scene);
+        if (index === 0) {
+          form.append("file", scene);
+        }
+      });
       form.append("project", project);
       form.append("variation", variation);
       form.append("artist", artist || "unknown");
@@ -106,7 +122,7 @@ export default function UploadForm() {
       form.append("always_notify", alwaysNotify ? "true" : "false");
       if (email) form.append("email", email);
       if (isCorrection) form.append("is_correction", "true");
-      if (renderList) form.append("renderlist", renderList);
+      form.append("renderlist", renderList);
 
       const response = await axios.post<JobResponse>(`${api}/uploads/`, form);
       setLastJob(response.data);
@@ -123,8 +139,16 @@ export default function UploadForm() {
       <form onSubmit={handleSubmit} className="upload-form">
         <div className="form-grid">
           <label className="field">
-            <span>Arquivo principal</span>
-            <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            <span>Arquivos de cena (renderizáveis)</span>
+            <input type="file" accept={acceptString} multiple onChange={(e) => setFiles(sanitizeFiles(e.target.files))} />
+            <small>Formatos aceitos: {RENDERABLE_EXTENSIONS.join(", ")}</small>
+            {!!files.length && (
+              <div className="file-chips">
+                {files.map((f) => (
+                  <span key={f.name}>{f.name}</span>
+                ))}
+              </div>
+            )}
           </label>
           <label className="field">
             <span>Projeto</span>
@@ -150,8 +174,8 @@ export default function UploadForm() {
             <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nome@estudio.com" />
           </label>
           <label className="field">
-            <span>Render list (opcional)</span>
-            <input type="file" onChange={(e) => setRenderList(e.target.files?.[0] ?? null)} />
+            <span>Render list (obrigatória)</span>
+            <input type="file" required onChange={(e) => setRenderList(e.target.files?.[0] ?? null)} />
           </label>
         </div>
 
@@ -176,17 +200,11 @@ export default function UploadForm() {
         <div className="default-card">
           <div>
             <p className="default-title">Render list padrão</p>
-            <span>Opcional para usuários admin. Atualiza a lista que o time inteiro consome.</span>
+            <span>Atualize a lista usada como referência global para este projeto.</span>
           </div>
           <label className="checkbox">
             <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} /> Atualizar render list padrão
           </label>
-          {isDefault && (
-            <div className="admin-block">
-              <input value={adminUser} onChange={(e) => setAdminUser(e.target.value)} placeholder="Usuário" />
-              <input value={adminPass} onChange={(e) => setAdminPass(e.target.value)} type="password" placeholder="Senha" />
-            </div>
-          )}
         </div>
 
         <button type="submit" disabled={submitting}>
@@ -303,10 +321,18 @@ export default function UploadForm() {
           font-size: 0.9rem;
         }
 
-        .admin-block {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-          gap: 0.75rem;
+        .file-chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.35rem;
+        }
+
+        .file-chips span {
+          background: rgba(37, 99, 235, 0.12);
+          color: #1d4ed8;
+          padding: 0.25rem 0.7rem;
+          border-radius: 999px;
+          font-size: 0.8rem;
         }
 
         button {

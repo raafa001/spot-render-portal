@@ -104,6 +104,7 @@ export default function Home() {
                 <li><strong>Hosts:</strong> `spot-render.local` + `api.spot-render.local` no /etc/hosts</li>
                 <li><strong>Storage:</strong> `/tmp/spot-render-storage/shared` com PVC persistente</li>
                 <li><strong>Port-forward:</strong> `kubectl -n spot-render port-forward svc/spot-render-web-stable 8081:80`</li>
+                <li><strong>Saída:</strong> todos os renders são exportados em PNG automaticamente</li>
                 <li><strong>CLI:</strong> exporte `STORAGE_MODE=local` para enviar lotes direto da estação</li>
               </ul>
             </aside>
