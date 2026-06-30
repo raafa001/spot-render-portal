@@ -35,6 +35,7 @@ src/
 
 ### Kubernetes
 - `k8s/rollout.yaml`, `k8s/hpa.yaml`, `k8s/services.yaml`, `k8s/servicemonitor.yaml` com probes e annotations WAF/TLS.
+- `k8s/ingress.yaml`: ingress padrão (host `spot-render.local`). Ajuste o host/anotações (`spot-render.aws.company.com`, TLS, etc.) para o ambiente de destino antes de aplicar.
 
 ### Tecnologias
 - Next.js 14 / React 18  
@@ -57,7 +58,7 @@ src/
 ### Testes locais
 1. Clone este repo e o [`spot-render-teste-local`](https://github.com/raafa001/spot-render-teste-local).  
 2. Execute `npm install && npm run dev` para testar a UI isolada.  
-3. Para o cluster local, siga o README do repo de teste: `make bootstrap` → `kubectl apply -k overlays/local`. O portal será exposto via ingress `spot-render.local`.  
+3. Para o cluster local, siga o README do repo de teste: `make bootstrap` → `kubectl apply -k overlays/local`. O portal será exposto via ingress `spot-render.local` (definido em `k8s/ingress.yaml`). Ajuste o host no arquivo para apontar para domínios reais em staging/prod.  
 4. Use o campo `renderlist` para subir a planilha padrão de teste.
 
 ### TechDocs / Backstage
