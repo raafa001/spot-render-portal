@@ -22,7 +22,7 @@ interface JobResponse {
 
 const EMAIL_PREF_KEY = "spotrenderAlwaysNotify";
 const EMAIL_VALUE_KEY = "spotrenderDefaultEmail";
-const RENDERABLE_EXTENSIONS = [".max", ".fbx", ".obj", ".blend", ".usd", ".abc", ".ma", ".mb", ".c4d"];
+const RENDERABLE_EXTENSIONS = [".max", ".fbx", ".obj", ".blend", ".usd", ".abc", ".ma", ".mb", ".c4d", ".ms"];
 
 export default function UploadForm() {
   const [files, setFiles] = useState<File[]>([]);

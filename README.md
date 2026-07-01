@@ -44,7 +44,7 @@ src/
 - Rollout canário + HPA em `spot-render` namespace.
 
 ### Uploads, notificações e saúde
-- Formulário aceita `file`, `project`, `variation`, `artist`, campo opcional **`renderlist`** e flags “correção”, “Desejo receber e-mail” e “Sempre receber e-mail”. O e-mail pode ser salvo em `localStorage` para não ser digitado a cada projeto.  
+- Formulário aceita `file`, `project`, `variation`, `artist`, campo opcional **`renderlist`** e flags “correção”, “Desejo receber e-mail” e “Sempre receber e-mail”. O e-mail pode ser salvo em `localStorage` para não ser digitado a cada projeto. Agora aceitamos arquivos de cena `.max`, `.ms`, `.fbx`, `.obj`, `.blend`, `.usd`, `.abc`, `.c4d`, `.ma`, `.mb`.  
 - A seleção de projetos é carregada dinamicamente via `GET /projects`, garantindo que cada upload vá para o bucket/prefixo correto.  
 - Após o envio, o formulário mostra as URIs de entrada/saída (`s3://...` ou `file://...`) e o bucket/repositório associado.  
 - A home exibe um banner verde/vermelho (“Ambiente está funcionando corretamente!” / “Ambiente com falha...”) baseado em `GET /health/summary`, com link para a nova página `/status`.  

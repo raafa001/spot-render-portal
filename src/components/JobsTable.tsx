@@ -228,6 +228,10 @@ export default function JobsTable() {
           color: #475569;
           margin-top: 0.35rem;
         }
+        .stage.error {
+          color: #b91c1c;
+          font-weight: 600;
+        }
         .pill {
           display: inline-flex;
           align-items: center;
