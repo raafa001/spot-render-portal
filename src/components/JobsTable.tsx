@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 
 interface Job {
@@ -19,6 +19,8 @@ interface Job {
   email?: string | null;
   error_message?: string | null;
   artifacts: Artifact[];
+  created_at: string;
+  updated_at: string;
 }
 
 interface Artifact {
@@ -37,23 +39,72 @@ function formatEta(seconds?: number | null) {
   return `${hours} h`;
 }
 
+function formatDate(value?: string) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
+}
+
 export default function JobsTable() {
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [loadingJobId, setLoadingJobId] = useState<string | null>(null);
   const apiBase = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
 
-  useEffect(() => {
+  const fetchJobs = useCallback(async () => {
     const api = process.env.NEXT_PUBLIC_API_URL;
     if (!api) return;
+    const res = await axios.get<Job[]>(`${api}/jobs/`);
+    setJobs(res.data);
+  }, []);
 
-    async function fetchJobs() {
-      const res = await axios.get<Job[]>(`${api}/jobs/`);
-      setJobs(res.data);
-    }
-
+  useEffect(() => {
     fetchJobs();
     const id = setInterval(fetchJobs, 15000);
     return () => clearInterval(id);
-  }, []);
+  }, [fetchJobs]);
+
+  const handleCancel = useCallback(
+    async (job: Job) => {
+      const api = process.env.NEXT_PUBLIC_API_URL;
+      if (!api) return;
+      setLoadingJobId(job.id);
+      try {
+        await axios.post(`${api}/jobs/${job.id}/cancel`);
+        await fetchJobs();
+      } catch (error) {
+        console.error(error);
+        alert("Não foi possível cancelar o job. Veja os logs para mais detalhes.");
+      } finally {
+        setLoadingJobId(null);
+      }
+    },
+    [fetchJobs]
+  );
+
+  const handleDelete = useCallback(
+    async (job: Job) => {
+      const api = process.env.NEXT_PUBLIC_API_URL;
+      if (!api) return;
+      if (!window.confirm(`Remover o job ${job.project}/${job.variation}?`)) {
+        return;
+      }
+      setLoadingJobId(job.id);
+      try {
+        await axios.delete(`${api}/jobs/${job.id}`);
+        await fetchJobs();
+      } catch (error) {
+        console.error(error);
+        alert("Falha ao excluir o job. Consulte os logs para mais detalhes.");
+      } finally {
+        setLoadingJobId(null);
+      }
+    },
+    [fetchJobs]
+  );
 
   return (
     <section className="jobs-board">
@@ -62,12 +113,14 @@ export default function JobsTable() {
           <tr>
             <th>Projeto</th>
             <th>Artista</th>
+            <th>Enfileirado</th>
             <th>Status</th>
             <th>Progresso</th>
             <th>ETA</th>
             <th>Locais</th>
             <th>Artefatos</th>
             <th>Notificação</th>
+            <th>Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -78,6 +131,9 @@ export default function JobsTable() {
                 <div className="sub">Var: {job.variation}</div>
               </td>
               <td>{job.artist}</td>
+              <td>
+                <div className="timestamp">{formatDate(job.created_at)}</div>
+              </td>
               <td>
                 <span className={`pill ${job.stage}`}>
                   {job.stage === "finalizing" ? "Concluindo" : job.stage === "completed" ? "Concluída" : job.stage}
@@ -122,6 +178,25 @@ export default function JobsTable() {
                 )}
               </td>
               <td>{job.notify_on_complete ? job.email || "Email configurado" : "—"}</td>
+              <td>
+                <div className="actions">
+                  <button
+                    type="button"
+                    disabled={loadingJobId === job.id || ["completed", "failed", "cancelled"].includes(job.stage)}
+                    onClick={() => handleCancel(job)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="danger"
+                    disabled={loadingJobId === job.id}
+                    onClick={() => handleDelete(job)}
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -145,6 +220,10 @@ export default function JobsTable() {
               <span style={{ width: `${Math.min(job.progress_percent ?? 0, 100)}%` }} />
             </div>
             <dl>
+              <div>
+                <dt>Criado em</dt>
+                <dd className="timestamp">{formatDate(job.created_at)}</dd>
+              </div>
               <div>
                 <dt>Artista</dt>
                 <dd>{job.artist}</dd>
@@ -185,6 +264,26 @@ export default function JobsTable() {
               <div>
                 <dt>Notificação</dt>
                 <dd>{job.notify_on_complete ? job.email || "Email configurado" : "—"}</dd>
+              </div>
+              <div>
+                <dt>Ações</dt>
+                <dd className="actions">
+                  <button
+                    type="button"
+                    disabled={loadingJobId === job.id || ["completed", "failed", "cancelled"].includes(job.stage)}
+                    onClick={() => handleCancel(job)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="danger"
+                    disabled={loadingJobId === job.id}
+                    onClick={() => handleDelete(job)}
+                  >
+                    Excluir
+                  </button>
+                </dd>
               </div>
             </dl>
           </article>
@@ -269,6 +368,10 @@ export default function JobsTable() {
           background: #fee2e2;
           color: #b91c1c;
         }
+        .pill.cancelled {
+          background: #f1f5f9;
+          color: #475569;
+        }
         .error-chip {
           margin-top: 0.5rem;
           padding: 0.3rem 0.6rem;
@@ -302,12 +405,43 @@ export default function JobsTable() {
           color: #94a3b8;
           font-size: 0.8rem;
         }
+        .timestamp {
+          color: #64748b;
+          font-size: 0.78rem;
+        }
         code {
           font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
           font-size: 0.75rem;
           background: #f1f5f9;
           padding: 0.15rem 0.35rem;
           border-radius: 6px;
+        }
+        .actions {
+          display: flex;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+        }
+        .actions button {
+          border: 1px solid #e2e8f0;
+          background: #fff;
+          color: #0f172a;
+          padding: 0.2rem 0.75rem;
+          border-radius: 999px;
+          font-weight: 600;
+          font-size: 0.8rem;
+          cursor: pointer;
+          transition: background 0.2s ease;
+        }
+        .actions button:hover:not(:disabled) {
+          background: #e2e8f0;
+        }
+        .actions button.danger {
+          border-color: #fecaca;
+          color: #b91c1c;
+        }
+        .actions button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
         .progress {
           width: 100%;
