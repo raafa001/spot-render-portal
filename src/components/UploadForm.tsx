@@ -117,6 +117,13 @@ export default function UploadForm() {
       const response = await axios.post<JobResponse>(`${api}/uploads/`, form);
       setLastJob(response.data);
       alert("Upload enviado!");
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const detail = error.response?.data?.detail;
+        alert(detail || "Falha ao enviar job. Verifique os arquivos e tente novamente.");
+      } else {
+        alert("Falha desconhecida ao enviar o job");
+      }
     } finally {
       setSubmitting(false);
     }

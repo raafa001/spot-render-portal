@@ -17,6 +17,15 @@ interface Job {
   storage_repo?: string | null;
   notify_on_complete: boolean;
   email?: string | null;
+  error_message?: string | null;
+  artifacts: Artifact[];
+}
+
+interface Artifact {
+  name: string;
+  download_url: string;
+  size: number;
+  modified_at: string;
 }
 
 function formatEta(seconds?: number | null) {
@@ -30,6 +39,7 @@ function formatEta(seconds?: number | null) {
 
 export default function JobsTable() {
   const [jobs, setJobs] = useState<Job[]>([]);
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
 
   useEffect(() => {
     const api = process.env.NEXT_PUBLIC_API_URL;
@@ -56,6 +66,7 @@ export default function JobsTable() {
             <th>Progresso</th>
             <th>ETA</th>
             <th>Locais</th>
+            <th>Artefatos</th>
             <th>Notificação</th>
           </tr>
         </thead>
@@ -71,7 +82,8 @@ export default function JobsTable() {
                 <span className={`pill ${job.stage}`}>
                   {job.stage === "finalizing" ? "Concluindo" : job.stage === "completed" ? "Concluída" : job.stage}
                 </span>
-                <div className="sub">{job.stage_message}</div>
+                <div className="stage-msg">{job.stage_message}</div>
+                {job.error_message && <div className="error-chip">Erro: {job.error_message}</div>}
               </td>
               <td>
                 <div className="progress">
@@ -89,6 +101,25 @@ export default function JobsTable() {
                 </div>
                 {job.storage_bucket && <div>Bucket: {job.storage_bucket}</div>}
                 {job.storage_repo && <div>Repo: {job.storage_repo}</div>}
+              </td>
+              <td>
+                {job.artifacts?.length ? (
+                  <div className="artifact-list">
+                    {job.artifacts.map((artifact) => (
+                      <a
+                        key={`${job.id}-${artifact.name}`}
+                        href={`${apiBase}${artifact.download_url}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="artifact-chip"
+                      >
+                        ⬇ {artifact.name}
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="muted">Sem arquivos ainda</span>
+                )}
               </td>
               <td>{job.notify_on_complete ? job.email || "Email configurado" : "—"}</td>
             </tr>
@@ -109,6 +140,7 @@ export default function JobsTable() {
               </span>
             </header>
             <p className="stage">{job.stage_message}</p>
+            {job.error_message && <p className="stage error">Erro: {job.error_message}</p>}
             <div className="progress">
               <span style={{ width: `${Math.min(job.progress_percent ?? 0, 100)}%` }} />
             </div>
@@ -126,6 +158,28 @@ export default function JobsTable() {
                 <dd>
                   <div>Entrada: <code>{job.input_uri}</code></div>
                   <div>Saída: <code>{job.output_uri}</code></div>
+                </dd>
+              </div>
+              <div>
+                <dt>Artefatos</dt>
+                <dd>
+                  {job.artifacts?.length ? (
+                    <div className="artifact-list">
+                      {job.artifacts.map((artifact) => (
+                        <a
+                          key={`${job.id}-mobile-${artifact.name}`}
+                          href={`${apiBase}${artifact.download_url}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="artifact-chip"
+                        >
+                          ⬇ {artifact.name}
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="muted">Sem arquivos</span>
+                  )}
                 </dd>
               </div>
               <div>
@@ -169,6 +223,11 @@ export default function JobsTable() {
           font-size: 0.8rem;
           color: #6b7280;
         }
+        .stage-msg {
+          font-size: 0.85rem;
+          color: #475569;
+          margin-top: 0.35rem;
+        }
         .pill {
           display: inline-flex;
           align-items: center;
@@ -201,6 +260,43 @@ export default function JobsTable() {
         .pill.completed {
           background: #dcfce7;
           color: #166534;
+        }
+        .pill.failed {
+          background: #fee2e2;
+          color: #b91c1c;
+        }
+        .error-chip {
+          margin-top: 0.5rem;
+          padding: 0.3rem 0.6rem;
+          border-radius: 8px;
+          background: #fef2f2;
+          color: #b91c1c;
+          font-size: 0.8rem;
+          font-weight: 600;
+        }
+        .artifact-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.3rem;
+        }
+        .artifact-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.25rem;
+          padding: 0.3rem 0.65rem;
+          border-radius: 999px;
+          background: #eef2ff;
+          color: #312e81;
+          text-decoration: none;
+          font-size: 0.75rem;
+          font-weight: 600;
+        }
+        .artifact-chip:hover {
+          background: #e0e7ff;
+        }
+        .muted {
+          color: #94a3b8;
+          font-size: 0.8rem;
         }
         code {
           font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
