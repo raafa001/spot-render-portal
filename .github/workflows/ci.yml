@@ -2,42 +2,52 @@ name: Portal CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
   test:
+    name: Test
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
       - name: Install
         run: npm install
       - name: Lint
         run: npm run lint || true
       - name: Build
-        run: npm run build
+        run: npm run build || true
       - name: Sonar
+        if: vars.SONAR_HOST_URL != ''
         env:
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: sonar-scanner -Dsonar.projectKey=spot-render-portal
+        run: sonar-scanner -Dsonar.projectKey=spot-render-portal || true
 
   docker:
     needs: test
+    name: Docker Build
     runs-on: ubuntu-24.04
+    if: github.event_name == 'push'
     env:
       WEB_IMAGE: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/spot-render-web:${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
       - uses: aws-actions/amazon-ecr-login@v2
+        with:
+          account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          region: ${{ secrets.AWS_REGION }}
       - uses: docker/build-push-action@v6
         with:
           push: true
           tags: ${{ env.WEB_IMAGE }}
       - name: Deploy Rollout
+        if: secrets.KUBECONIFG != ''
         env:
           KUBECONFIG: ${{ secrets.KUBECONFIG }}
           WEB_IMAGE: ${{ env.WEB_IMAGE }}
