@@ -21,6 +21,23 @@ interface Job {
   artifacts: Artifact[];
   created_at: string;
   updated_at: string;
+  is_multi_file: boolean;
+  total_files: number;
+  rendered_files: number;
+  failed_files: number;
+  files?: JobFile[];
+}
+
+interface JobFile {
+  id: string;
+  filename: string;
+  file_index: number;
+  file_hash: string;
+  file_size: number;
+  validation_status: string;
+  validation_message: string;
+  render_status: string;
+  render_error: string;
 }
 
 interface Artifact {
@@ -28,6 +45,16 @@ interface Artifact {
   download_url: string;
   size: number;
   modified_at: string;
+}
+
+interface ResumeResponse {
+  id: string;
+  status: string;
+  stage: string;
+  stage_message: string;
+  resumed_at: string;
+  already_rendered_files: string[];
+  message: string;
 }
 
 function formatEta(seconds?: number | null) {
@@ -49,16 +76,30 @@ function formatDate(value?: string) {
   }).format(date);
 }
 
+function formatFileSize(bytes: number) {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+}
+
 export default function JobsTable() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loadingJobId, setLoadingJobId] = useState<string | null>(null);
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
+  const [resumeWarning, setResumeWarning] = useState<ResumeResponse | null>(null);
   const apiBase = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
 
   const fetchJobs = useCallback(async () => {
     const api = process.env.NEXT_PUBLIC_API_URL;
     if (!api) return;
-    const res = await axios.get<Job[]>(`${api}/jobs/`);
-    setJobs(res.data);
+    try {
+      const res = await axios.get<Job[]>(`${api}/jobs/`);
+      setJobs(res.data);
+    } catch (error) {
+      console.error("Erro ao buscar jobs:", error);
+    }
   }, []);
 
   useEffect(() => {
@@ -71,6 +112,9 @@ export default function JobsTable() {
     async (job: Job) => {
       const api = process.env.NEXT_PUBLIC_API_URL;
       if (!api) return;
+      if (!window.confirm(`Cancelar o job ${job.project}/${job.variation}?`)) {
+        return;
+      }
       setLoadingJobId(job.id);
       try {
         await axios.post(`${api}/jobs/${job.id}/cancel`);
@@ -85,11 +129,49 @@ export default function JobsTable() {
     [fetchJobs]
   );
 
+  const handleResume = useCallback(
+    async (job: Job) => {
+      const api = process.env.NEXT_PUBLIC_API_URL;
+      if (!api) return;
+      if (!window.confirm(`Retomar o job ${job.project}/${job.variation}?`)) {
+        return;
+      }
+      setLoadingJobId(job.id);
+      try {
+        const res = await axios.post<ResumeResponse>(`${api}/jobs/${job.id}/resume`);
+        const response = res.data;
+
+        if (response.already_rendered_files && response.already_rendered_files.length > 0) {
+          setResumeWarning(response);
+          const confirmResume = window.confirm(
+            `ATENÇÃO: ${response.already_rendered_files.length} arquivo(s) já foram renderizados:\n` +
+            response.already_rendered_files.join(", ") +
+            "\n\nDeseja continuar? Os arquivos já renderizados serão mantidos."
+          );
+          if (!confirmResume) {
+            setLoadingJobId(null);
+            return;
+          }
+        }
+
+        alert(response.message);
+        await fetchJobs();
+      } catch (error) {
+        console.error(error);
+        alert("Não foi possível retomar o job. Veja os logs para mais detalhes.");
+      } finally {
+        setLoadingJobId(null);
+        setResumeWarning(null);
+      }
+    },
+    [fetchJobs]
+  );
+
   const handleDelete = useCallback(
     async (job: Job) => {
       const api = process.env.NEXT_PUBLIC_API_URL;
       if (!api) return;
-      if (!window.confirm(`Remover o job ${job.project}/${job.variation}?`)) {
+      if (!window.confirm(`Excluir definitivamente o job ${job.project}/${job.variation}? Esta ação não pode ser desfeita.`)) {
         return;
       }
       setLoadingJobId(job.id);
@@ -106,6 +188,58 @@ export default function JobsTable() {
     [fetchJobs]
   );
 
+  const handleRemoveFile = useCallback(
+    async (jobId: string, fileId: string, filename: string) => {
+      const api = process.env.NEXT_PUBLIC_API_URL;
+      if (!api) return;
+      if (!window.confirm(`Remover o arquivo ${filename} do job?`)) {
+        return;
+      }
+      try {
+        await axios.delete(`${api}/jobs/${jobId}/files/${fileId}`);
+        await fetchJobs();
+        alert("Arquivo removido com sucesso.");
+      } catch (error: unknown) {
+        console.error(error);
+        const detail = (error as any).response?.data?.detail || "Falha ao remover arquivo.";
+        alert(detail);
+      }
+    },
+    [fetchJobs]
+  );
+
+  const toggleExpand = useCallback((jobId: string) => {
+    setExpandedJobId(prev => prev === jobId ? null : jobId);
+  }, []);
+
+  const getValidationBadge = (status: string) => {
+    switch (status) {
+      case "valid":
+        return <span className="badge valid">Válido</span>;
+      case "invalid":
+        return <span className="badge invalid">Inválido</span>;
+      case "pending":
+        return <span className="badge pending">Pendente</span>;
+      case "removed":
+        return <span className="badge removed">Removido</span>;
+      default:
+        return <span className="badge">{status}</span>;
+    }
+  };
+
+  const getRenderBadge = (status: string) => {
+    switch (status) {
+      case "rendered":
+        return <span className="badge rendered">Renderizado</span>;
+      case "failed":
+        return <span className="badge failed">Falhou</span>;
+      case "pending":
+        return <span className="badge pending">Pendente</span>;
+      default:
+        return <span className="badge">{status}</span>;
+    }
+  };
+
   return (
     <section className="jobs-board">
       <table className="jobs-table">
@@ -117,9 +251,8 @@ export default function JobsTable() {
             <th>Status</th>
             <th>Progresso</th>
             <th>ETA</th>
-            <th>Locais</th>
+            <th>Arquivos</th>
             <th>Artefatos</th>
-            <th>Notificação</th>
             <th>Ações</th>
           </tr>
         </thead>
@@ -149,14 +282,44 @@ export default function JobsTable() {
               </td>
               <td>{formatEta(job.eta_seconds)}</td>
               <td>
-                <div>
-                  Entrada: <code>{job.input_uri}</code>
-                </div>
-                <div>
-                  Saída: <code>{job.output_uri}</code>
-                </div>
-                {job.storage_bucket && <div>Bucket: {job.storage_bucket}</div>}
-                {job.storage_repo && <div>Repo: {job.storage_repo}</div>}
+                {job.is_multi_file ? (
+                  <button
+                    type="button"
+                    className="expand-btn"
+                    onClick={() => toggleExpand(job.id)}
+                  >
+                    {job.files?.length || job.total_files} arquivos
+                    {job.rendered_files > 0 && <span className="rendered-count">✓ {job.rendered_files}</span>}
+                    {job.failed_files > 0 && <span className="failed-count">✗ {job.failed_files}</span>}
+                  </button>
+                ) : (
+                  <span className="muted">1 arquivo</span>
+                )}
+                {expandedJobId === job.id && job.files && (
+                  <div className="file-list">
+                    {job.files.map((file) => (
+                      <div key={file.id} className="file-item">
+                        <div className="file-info">
+                          <span className="file-name">{file.filename}</span>
+                          <span className="file-size">{formatFileSize(file.file_size)}</span>
+                        </div>
+                        <div className="file-badges">
+                          {getValidationBadge(file.validation_status)}
+                          {getRenderBadge(file.render_status)}
+                        </div>
+                        {file.validation_status === "invalid" && (
+                          <button
+                            type="button"
+                            className="remove-file-btn"
+                            onClick={() => handleRemoveFile(job.id, file.id, file.filename)}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </td>
               <td>
                 {job.artifacts?.length ? (
@@ -177,9 +340,18 @@ export default function JobsTable() {
                   <span className="muted">Sem arquivos ainda</span>
                 )}
               </td>
-              <td>{job.notify_on_complete ? job.email || "Email configurado" : "—"}</td>
               <td>
                 <div className="actions">
+                  {job.stage === "cancelled" && (
+                    <button
+                      type="button"
+                      className="resume-btn"
+                      disabled={loadingJobId === job.id}
+                      onClick={() => handleResume(job)}
+                    >
+                      Retomar
+                    </button>
+                  )}
                   <button
                     type="button"
                     disabled={loadingJobId === job.id || ["completed", "failed", "cancelled"].includes(job.stage)}
@@ -233,10 +405,16 @@ export default function JobsTable() {
                 <dd>{formatEta(job.eta_seconds)}</dd>
               </div>
               <div>
-                <dt>Locais</dt>
+                <dt>Arquivos</dt>
                 <dd>
-                  <div>Entrada: <code>{job.input_uri}</code></div>
-                  <div>Saída: <code>{job.output_uri}</code></div>
+                  {job.is_multi_file ? (
+                    <span>
+                      {job.files?.length || job.total_files} arquivos
+                      ({job.rendered_files} ✓, {job.failed_files} ✗)
+                    </span>
+                  ) : (
+                    "1 arquivo"
+                  )}
                 </dd>
               </div>
               <div>
@@ -262,12 +440,18 @@ export default function JobsTable() {
                 </dd>
               </div>
               <div>
-                <dt>Notificação</dt>
-                <dd>{job.notify_on_complete ? job.email || "Email configurado" : "—"}</dd>
-              </div>
-              <div>
                 <dt>Ações</dt>
                 <dd className="actions">
+                  {job.stage === "cancelled" && (
+                    <button
+                      type="button"
+                      className="resume-btn"
+                      disabled={loadingJobId === job.id}
+                      onClick={() => handleResume(job)}
+                    >
+                      Retomar
+                    </button>
+                  )}
                   <button
                     type="button"
                     disabled={loadingJobId === job.id || ["completed", "failed", "cancelled"].includes(job.stage)}
@@ -381,6 +565,104 @@ export default function JobsTable() {
           font-size: 0.8rem;
           font-weight: 600;
         }
+        .badge {
+          display: inline-flex;
+          padding: 0.15rem 0.5rem;
+          border-radius: 6px;
+          font-size: 0.7rem;
+          font-weight: 600;
+          margin-right: 0.25rem;
+        }
+        .badge.valid {
+          background: #dcfce7;
+          color: #166534;
+        }
+        .badge.invalid {
+          background: #fee2e2;
+          color: #b91c1c;
+        }
+        .badge.pending {
+          background: #fef3c7;
+          color: #92400e;
+        }
+        .badge.removed {
+          background: #f1f5f9;
+          color: #64748b;
+        }
+        .badge.rendered {
+          background: #dcfce7;
+          color: #166534;
+        }
+        .badge.failed {
+          background: #fee2e2;
+          color: #b91c1c;
+        }
+        .file-list {
+          margin-top: 0.5rem;
+          padding: 0.5rem;
+          background: #f8fafc;
+          border-radius: 8px;
+          max-height: 200px;
+          overflow-y: auto;
+        }
+        .file-item {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.35rem 0;
+          border-bottom: 1px solid #e2e8f0;
+        }
+        .file-item:last-child {
+          border-bottom: none;
+        }
+        .file-info {
+          flex: 1;
+          min-width: 0;
+        }
+        .file-name {
+          font-size: 0.8rem;
+          font-weight: 500;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .file-size {
+          font-size: 0.7rem;
+          color: #94a3b8;
+        }
+        .file-badges {
+          display: flex;
+          gap: 0.25rem;
+        }
+        .remove-file-btn {
+          background: #fee2e2;
+          border: none;
+          color: #b91c1c;
+          padding: 0.2rem 0.4rem;
+          border-radius: 4px;
+          font-size: 0.7rem;
+          cursor: pointer;
+        }
+        .remove-file-btn:hover {
+          background: #fecaca;
+        }
+        .expand-btn {
+          background: #eef2ff;
+          border: none;
+          color: #4338ca;
+          padding: 0.3rem 0.6rem;
+          border-radius: 8px;
+          font-size: 0.8rem;
+          cursor: pointer;
+        }
+        .rendered-count {
+          color: #166534;
+          margin-left: 0.5rem;
+        }
+        .failed-count {
+          color: #b91c1c;
+          margin-left: 0.25rem;
+        }
         .artifact-list {
           display: flex;
           flex-wrap: wrap;
@@ -438,6 +720,17 @@ export default function JobsTable() {
         .actions button.danger {
           border-color: #fecaca;
           color: #b91c1c;
+        }
+        .actions button.danger:hover:not(:disabled) {
+          background: #fef2f2;
+        }
+        .actions button.resume-btn {
+          background: #fef3c7;
+          border-color: #fcd34d;
+          color: #92400e;
+        }
+        .actions button.resume-btn:hover:not(:disabled) {
+          background: #fde68a;
         }
         .actions button:disabled {
           opacity: 0.5;

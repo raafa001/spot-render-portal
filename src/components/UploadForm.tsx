@@ -18,11 +18,17 @@ interface JobResponse {
   output_uri: string;
   storage_bucket?: string | null;
   storage_repo?: string | null;
+  is_multi_file: boolean;
+  total_files: number;
+}
+
+interface SupportedFormats {
+  extensions: string[];
+  total: number;
 }
 
 const EMAIL_PREF_KEY = "spotrenderAlwaysNotify";
 const EMAIL_VALUE_KEY = "spotrenderDefaultEmail";
-const RENDERABLE_EXTENSIONS = [".max", ".fbx", ".obj", ".blend", ".usd", ".abc", ".ma", ".mb", ".c4d", ".ms"];
 
 export default function UploadForm() {
   const [files, setFiles] = useState<File[]>([]);
@@ -37,16 +43,27 @@ export default function UploadForm() {
   const [isCorrection, setIsCorrection] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [lastJob, setLastJob] = useState<JobResponse | null>(null);
+  const [supportedFormats, setSupportedFormats] = useState<string[]>([]);
+  const [validationErrors, setValidationErrors] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     const api = process.env.NEXT_PUBLIC_API_URL;
     if (!api) return;
+
+    // Fetch projects
     axios.get<ProjectRoute[]>(`${api}/projects/`).then((res) => {
       setProjects(res.data);
       if (res.data.length > 0) {
         setProject(res.data[0].name);
       }
     });
+
+    // Fetch supported formats
+    axios.get<SupportedFormats>(`${api}/uploads/supported-formats`).then((res) => {
+      setSupportedFormats(res.data.extensions);
+    });
+
+    // Load saved preferences
     if (typeof window !== "undefined") {
       const savedAlways = window.localStorage.getItem(EMAIL_PREF_KEY);
       const savedEmail = window.localStorage.getItem(EMAIL_VALUE_KEY);
@@ -67,44 +84,97 @@ export default function UploadForm() {
     }
   }, [alwaysNotify, email]);
 
-  const acceptString = RENDERABLE_EXTENSIONS.join(",");
+  function isValidExtension(filename: string): boolean {
+    const ext = "." + filename.split(".").pop()?.toLowerCase();
+    return supportedFormats.includes(ext);
+  }
 
-  function sanitizeFiles(list: FileList | null) {
+  function sanitizeFiles(list: FileList | null): File[] {
     if (!list) return [];
     const selected = Array.from(list);
-    const accepted = selected.filter((item) => RENDERABLE_EXTENSIONS.some((ext) => item.name.toLowerCase().endsWith(ext)));
-    if (accepted.length !== selected.length) {
-      const rejected = selected.filter((item) => !accepted.includes(item));
-      alert(`Alguns arquivos foram ignorados por não terem extensões suportadas: ${rejected.map((f) => f.name).join(", ")}`);
+    const accepted: File[] = [];
+    const errors = new Map<string, string>();
+
+    for (const item of selected) {
+      if (isValidExtension(item.name)) {
+        accepted.push(item);
+      } else {
+        errors.set(item.name, "Formato não suportado");
+      }
     }
+
+    if (errors.size > 0) {
+      setValidationErrors(errors);
+      const errorList = Array.from(errors.keys()).join(", ");
+      alert(`Alguns arquivos foram rejeitados por terem formatos não suportados:\n${errorList}\n\nFormatos aceitos: ${supportedFormats.join(", ")}`);
+    } else {
+      setValidationErrors(new Map());
+    }
+
     return accepted;
+  }
+
+  async function validateFile(file: File): Promise<{ valid: boolean; message: string }> {
+    const api = process.env.NEXT_PUBLIC_API_URL;
+    if (!api) return { valid: false, message: "API não configurada" };
+
+    try {
+      // Para validação real, precisaríamos enviar o arquivo para o servidor
+      // Por ora, vamos apenas validar a extensão
+      if (!isValidExtension(file.name)) {
+        return { valid: false, message: "Formato não suportado" };
+      }
+      return { valid: true, message: "OK" };
+    } catch (error) {
+      return { valid: false, message: "Erro ao validar arquivo" };
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!files.length) {
-      alert("Selecione pelo menos um arquivo renderizável (.max, .fbx, etc.)");
+      alert("Selecione pelo menos um arquivo renderizável");
       return;
     }
     if (!renderList) {
       alert("Anexe uma render list (obrigatória)");
       return;
     }
+
     const api = process.env.NEXT_PUBLIC_API_URL;
     if (!api) {
       alert("NEXT_PUBLIC_API_URL não configurado");
       return;
     }
 
+    // Valida todos os arquivos
+    const invalidFiles: string[] = [];
+    for (const file of files) {
+      const result = await validateFile(file);
+      if (!result.valid) {
+        invalidFiles.push(`${file.name}: ${result.message}`);
+      }
+    }
+
+    if (invalidFiles.length > 0) {
+      alert(`Os seguintes arquivos são inválidos e serão rejeitados:\n${invalidFiles.join("\n")}\n\nRemova estes arquivos e tente novamente.`);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const form = new FormData();
-      files.forEach((scene, index) => {
-        form.append("files", scene);
-        if (index === 0) {
-          form.append("file", scene);
+
+      if (files.length === 1) {
+        // Upload simples
+        form.append("file", files[0]);
+      } else {
+        // Upload multi-arquivo
+        for (const file of files) {
+          form.append("files", file);
         }
-      });
+      }
+
       form.append("project", project);
       form.append("variation", variation);
       form.append("artist", artist || "unknown");
@@ -114,9 +184,18 @@ export default function UploadForm() {
       if (isCorrection) form.append("is_correction", "true");
       form.append("renderlist", renderList);
 
-      const response = await axios.post<JobResponse>(`${api}/uploads/`, form);
+      const endpoint = files.length > 1 ? `${api}/uploads/multi` : `${api}/uploads/`;
+      const response = await axios.post<JobResponse>(endpoint, form);
+
       setLastJob(response.data);
-      alert("Upload enviado!");
+
+      const msg = files.length > 1
+        ? `${files.length} arquivos enviados!`
+        : "Upload enviado!";
+
+      alert(msg);
+      setFiles([]);
+      setRenderList(null);
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         const detail = error.response?.data?.detail;
@@ -129,6 +208,12 @@ export default function UploadForm() {
     }
   }
 
+  const removeFile = (index: number) => {
+    const newFiles = [...files];
+    newFiles.splice(index, 1);
+    setFiles(newFiles);
+  };
+
   const selectedProject = projects.find((p) => p.name === project);
 
   return (
@@ -136,13 +221,27 @@ export default function UploadForm() {
       <form onSubmit={handleSubmit} className="upload-form">
         <div className="form-grid">
           <label className="field">
-            <span>Arquivos de cena (renderizáveis)</span>
-            <input type="file" accept={acceptString} multiple onChange={(e) => setFiles(sanitizeFiles(e.target.files))} />
-            <small>Formatos aceitos: {RENDERABLE_EXTENSIONS.join(", ")}</small>
+            <span>Arquivos de cena ({files.length} selecionado{s files.length !== 1 ? "s" : ""})</span>
+            <input
+              type="file"
+              accept={supportedFormats.join(",")}
+              multiple
+              onChange={(e) => setFiles(prev => [...prev, ...sanitizeFiles(e.target.files)])}
+            />
+            <small>Formatos aceitos: {supportedFormats.join(", ")}</small>
             {!!files.length && (
               <div className="file-chips">
-                {files.map((f) => (
-                  <span key={f.name}>{f.name}</span>
+                {files.map((f, index) => (
+                  <span key={f.name + index} className="file-chip">
+                    {f.name}
+                    <button
+                      type="button"
+                      className="remove-file"
+                      onClick={() => removeFile(index)}
+                    >
+                      ✕
+                    </button>
+                  </span>
                 ))}
               </div>
             )}
@@ -195,8 +294,8 @@ export default function UploadForm() {
           </div>
         </div>
 
-        <button type="submit" disabled={submitting}>
-          {submitting ? "Enviando..." : "Enviar job"}
+        <button type="submit" disabled={submitting || files.length === 0}>
+          {submitting ? "Enviando..." : files.length > 1 ? `Enviar ${files.length} arquivos` : "Enviar job"}
         </button>
       </form>
 
@@ -206,6 +305,11 @@ export default function UploadForm() {
           <p>
             Projeto <strong>{lastJob.project}</strong> – status: {lastJob.stage_message}
           </p>
+          {lastJob.is_multi_file && (
+            <p>
+              <strong>{lastJob.total_files}</strong> arquivo(s) enviados
+            </p>
+          )}
           <p>
             Origem: <code>{lastJob.input_uri}</code>
           </p>
@@ -292,14 +396,32 @@ export default function UploadForm() {
           display: flex;
           flex-wrap: wrap;
           gap: 0.35rem;
+          margin-top: 0.5rem;
         }
 
-        .file-chips span {
+        .file-chip {
           background: rgba(37, 99, 235, 0.12);
           color: #1d4ed8;
-          padding: 0.25rem 0.7rem;
+          padding: 0.25rem 0.5rem;
           border-radius: 999px;
           font-size: 0.8rem;
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+        }
+
+        .remove-file {
+          background: none;
+          border: none;
+          color: #1d4ed8;
+          cursor: pointer;
+          padding: 0;
+          font-size: 0.7rem;
+          opacity: 0.7;
+        }
+
+        .remove-file:hover {
+          opacity: 1;
         }
 
         button {
