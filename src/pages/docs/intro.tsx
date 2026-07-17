@@ -1,7 +1,7 @@
 import Head from "next/head";
 import Link from "next/link";
-import DocLayout from "../../../components/DocLayout";
-import SpotinhoWidget from "../../../components/SpotinhoWidget";
+import DocLayout from "../../components/DocLayout";
+import SpotinhoWidget from "../../components/SpotinhoWidget";
 
 const sections = [
   { id: "o-que-e", title: "O que é o Spot Render", icon: "🎯" },
@@ -67,7 +67,7 @@ export default function IntroPage() {
             <li>
               <strong>Envie um Job</strong>
               <p>
-                Na seção "Enviar novo job", selecione os arquivos, escolha o projeto,
+                Na seção Enviar novo job, selecione os arquivos, escolha o projeto,
                 variação e artista responsável.
               </p>
             </li>
@@ -189,7 +189,7 @@ export default function IntroPage() {
           <div className="faq-item">
             <h4>Como recebo notificações?</h4>
             <p>
-              Ao enviar um job, marque a opção "Desejo receber um aviso no email".
+              Ao enviar um job, marque a opção Desejo receber um aviso no email.
               Você receberá uma notificação quando o render for concluído ou se
               houver falhas.
             </p>

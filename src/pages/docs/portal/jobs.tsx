@@ -135,8 +135,8 @@ export default function JobsPage() {
         <h3>Informações Exibidas</h3>
         <ul>
           <li><strong>Barra de progresso</strong> - Visualização gráfica do andamento</li>
-          <li><strong>Frames renderizados</strong> - Ex: "50/100 frames"</li>
-          <li><strong>Porcentagem</strong> - Ex: "50%"</li>
+          <li><strong>Frames renderizados</strong> - Ex: 50/100 frames</li>
+          <li><strong>Porcentagem</strong> - Ex: 50%</li>
           <li><strong>ETA</strong> - Tempo estimado para conclusão</li>
         </ul>
 
@@ -166,11 +166,11 @@ export default function JobsPage() {
           </div>
           <div className="action-card">
             <h4>❌ Cancelar</h4>
-            <p>Clique em "Cancelar" para abortar um job em execução ou na fila.</p>
+            <p>Clique em Cancelar para abortar um job em execução ou na fila.</p>
           </div>
           <div className="action-card">
             <h4>🔄 Retry</h4>
-            <p>Para jobs falhados, clique em "Retry" para reenviar automaticamente.</p>
+            <p>Para jobs falhados, clique em Retry para reenviar automaticamente.</p>
           </div>
         </div>
 

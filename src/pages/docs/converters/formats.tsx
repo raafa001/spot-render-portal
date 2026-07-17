@@ -1,3 +1,4 @@
+import Link from "next/link";
 import DocLayout from "../../../components/DocLayout";
 
 const sections = [
@@ -27,7 +28,7 @@ export default function FormatsPage() {
             <span className="badge-recommended">Recomendado</span>
             <p>
               Formato mais versátil e recomendado. Suporta malhas, materiais,
-              texturas, skeleton's e animações.
+              texturas, esqueletos e animações.
             </p>
             <ul>
               <li><strong>Prós:</strong> Compatibilidade universal, mantém hierarquia</li>
@@ -104,7 +105,7 @@ export default function FormatsPage() {
               <li>Abra o arquivo no 3ds Max</li>
               <li>Vá em <strong>File → Export → Export</strong></li>
               <li>Selecione <strong>FBX (*.fbx)</strong></li>
-              <li>Nas opções, marque <strong>"Embed Media"</strong></li>
+              <li>Nas opções, marque <strong>Embed Media</strong></li>
               <li>Salve e envie o .fbx</li>
             </ol>
           </div>
@@ -119,7 +120,7 @@ export default function FormatsPage() {
               <li>Abra o arquivo no Maya</li>
               <li>Vá em <strong>File → Export All</strong></li>
               <li>Selecione <strong>FBX export</strong></li>
-              <li>Nas opções, marque <strong>"Fill: Animation"</strong></li>
+              <li>Nas opções, marque <strong>Fill: Animation</strong></li>
               <li>Salve e envie o .fbx</li>
             </ol>
           </div>
@@ -183,8 +184,8 @@ export default function FormatsPage() {
           <div className="tip-item">
             <h4>📦 Texturas Embutidas</h4>
             <p>
-              Sempre use a opção <strong>"Embed Media"</strong> ou
-              <strong>"Pack Resources"</strong> para que as texturas fiquem
+              Sempre use a opção <strong>Embed Media</strong> ou
+              <strong>Pack Resources</strong> para que as texturas fiquem
               junto com o arquivo.
             </p>
           </div>
@@ -201,7 +202,7 @@ export default function FormatsPage() {
           <div className="tip-item">
             <h4>🎬 Animações</h4>
             <p>
-              Para renders animados, marque a opção <strong>"Animation"</strong>
+              Para renders animados, marque a opção <strong>Animation</strong>
               na exportação. A render list deve especificar os frames corretos.
             </p>
           </div>
@@ -222,7 +223,7 @@ export default function FormatsPage() {
             de conversão! 😊
           </p>
           <p>
-            <a href="/docs/portal/upload">Veja também a documentação de Upload →</a>
+            <Link href="/docs/portal/upload">Veja também a documentação de Upload →</Link>
           </p>
         </div>
       </section>

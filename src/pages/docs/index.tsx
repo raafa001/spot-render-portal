@@ -398,7 +398,7 @@ Se não encontrar nada relevante, responda: [NONE]`,
                       </>
                     ) : searchQuery && !isSearching ? (
                       <div className="no-results">
-                        <p>Nenhum resultado encontrado para "{searchQuery}"</p>
+                        <p>Nenhum resultado encontrado para: {searchQuery}</p>
                         <p className="suggestion">Tente buscar por termos diferentes ou limpe os filtros.</p>
                       </div>
                     ) : null}

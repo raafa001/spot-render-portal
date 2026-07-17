@@ -1,3 +1,4 @@
+import Link from "next/link";
 import DocLayout from "../../../components/DocLayout";
 
 const sections = [
@@ -18,7 +19,7 @@ export default function StatsPage() {
         <p>
           O portal exibe um <strong>dashboard completo</strong> com métricas
           de renderização em tempo real. Acesse em
-          <a href="/statistics">/statistics</a>.
+          <Link href="/statistics">/statistics</Link>.
         </p>
 
         <div className="dashboard-preview">
@@ -129,7 +130,7 @@ export default function StatsPage() {
             O <strong>Spotinho</strong> pode ajudar com dúvidas sobre estatísticas! 😊
           </p>
           <p>
-            <a href="/docs/api/overview">Veja também a API REST →</a>
+            <Link href="/docs/api/overview">Veja também a API REST →</Link>
           </p>
         </div>
       </section>

@@ -178,7 +178,7 @@ metadata:
           <h4>💡 Dica</h4>
           <p>
             Para audit, veja os logs do CloudTrail em
-            <code>AWS CloudWatch > Log groups > cloudtrail</code>.
+            <code>{'AWS CloudWatch > Log groups > cloudtrail'}</code>.
           </p>
         </div>
 

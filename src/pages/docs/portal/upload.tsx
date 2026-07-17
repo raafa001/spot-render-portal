@@ -118,7 +118,7 @@ scene_v2.fbx,1,50,render_v2`}</pre>
       <section id="notificacoes">
         <h2>🔔 Notificações</h2>
         <p>
-          Ao marcar a opção <strong>"Desejo receber um aviso no email"</strong>,
+          Ao marcar a opção <strong>Desejo receber um aviso no email</strong>,
           você receberá notificações sobre o status do job:
         </p>
 

@@ -1,7 +1,7 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useState } from "react";
-import SpotinhoWidget from "../../../components/SpotinhoWidget";
+import SpotinhoWidget from "./SpotinhoWidget";
 
 interface DocLayoutProps {
   title: string;

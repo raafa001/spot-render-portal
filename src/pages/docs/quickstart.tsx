@@ -1,4 +1,5 @@
-import DocLayout from "../../../components/DocLayout";
+import Link from "next/link";
+import DocLayout from "../../components/DocLayout";
 
 const sections = [
   { id: "ambiente-local", title: "Ambiente Local", icon: "💻" },
@@ -150,7 +151,7 @@ OLLAMA_MODEL=llama3.2`}</pre>
           </li>
           <li>
             <span className="check">✓</span>
-            Status muda de "queued" para "running"
+            Status muda de queued para running
           </li>
           <li>
             <span className="check">✓</span>
@@ -158,7 +159,7 @@ OLLAMA_MODEL=llama3.2`}</pre>
           </li>
           <li>
             <span className="check">✓</span>
-            Status muda para "completed"
+            Status muda para completed
           </li>
           <li>
             <span className="check">✓</span>
@@ -177,10 +178,10 @@ OLLAMA_MODEL=llama3.2`}</pre>
         <div className="next-steps">
           <h3>Próximos Passos</h3>
           <ul>
-            <li><a href="/docs/intro">Entenda a arquitetura completa →</a></li>
-            <li><a href="/docs/converters/formats">Veja os formatos aceitos →</a></li>
-            <li><a href="/docs/api/overview">Explore a API REST →</a></li>
-            <li><a href="/docs/cli/install">Instale o CLI →</a></li>
+            <li><Link href="/docs/intro">Entenda a arquitetura completa →</Link></li>
+            <li><Link href="/docs/converters/formats">Veja os formatos aceitos →</Link></li>
+            <li><Link href="/docs/api/overview">Explore a API REST →</Link></li>
+            <li><Link href="/docs/cli/install">Instale o CLI →</Link></li>
           </ul>
         </div>
       </section>
