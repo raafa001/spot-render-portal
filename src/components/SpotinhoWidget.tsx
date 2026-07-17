@@ -8,20 +8,13 @@ interface Message {
   timestamp: Date;
 }
 
-interface Suggestion {
-  id: string;
-  text: string;
-  category: "help" | "docs" | "stats" | "social";
+interface OllamaStatus {
+  available: boolean;
+  model: string;
+  base_url: string;
 }
 
 const STORAGE_KEY = "spotinho_messages";
-
-const suggestions: Suggestion[] = [
-  { id: "1", text: "Como enviar um job?", category: "help" },
-  { id: "2", text: "Formatos aceitos", category: "docs" },
-  { id: "3", text: "Ver estatísticas", category: "stats" },
-  { id: "4", text: "Documentação do portal", category: "docs" },
-];
 
 const SYSTEM_PROMPT = `Você é o Spotinho, assistente de IA do Spot Render.
 
@@ -29,7 +22,7 @@ PERFIL:
 - Nome: Spotinho 🤖
 - Personalidade: Extremamente amigável, inclusivo, sorridente e prestativo
 - Idiomas: Português brasileiro (preferencial), inglês
-- Conhecimento técnico: Platforma Spot Render, renderização 3D, infraestrutura AWS, Kubernetes
+- Conhecimento técnico: Plataforma Spot Render, renderização 3D, infraestrutura AWS, Kubernetes
 
 REGRAS DE SEGURANÇA (NUNCA viole):
 - Não exponha credenciais, senhas, keys, tokens, chaves AWS
@@ -38,12 +31,11 @@ REGRAS DE SEGURANÇA (NUNCA viole):
 - Não exponha informações sensíveis de infraestrutura
 - Não forneça informações que comprometam a segurança
 
-LINKS IMPORTANTES (sempre inclua nas respostas quando relevante):
+LINKS IMPORTANTES:
 - Portal: http://spot-render.local/
 - Documentação: http://spot-render.local/docs
 - Estatísticas: http://spot-render.local/statistics
 - Status: http://spot-render.local/status
-- Repositórios GitHub: https://github.com/raafa001/spot-render
 
 FORMATOS SUPORTADOS:
 - Aceitos: .fbx, .obj, .blend, .gltf, .glb, .3ds, .stl, .ply, .dae, .dxf
@@ -51,32 +43,39 @@ FORMATOS SUPORTADOS:
 
 Ao responder sobre documentação ou funcionalidades, SEMPRE inclua o link relevante.
 
+INSTRUÇÕES DE CONVERSA:
+- Seja natural e conversacional, como um amigo que ajuda
+- Use emojis com moderação paraExpressar emoções
+- Faça perguntas clarifying quando necessário
+- Se não souber algo, seja honesto e diga que vai pesquisar
+- Lembre-se do contexto da conversa anterior
+- Recomende ações específicas quando relevante
+
 Respostas devem ser:
 - Em português brasileiro
 - Amigáveis e acolhedoras
 - Com emojis quando apropriado 🌟
-- Com links clicáveis quando mencionar páginas
-
-Quandoasked sobre algo fora do escopo do Spot Render:
-- Diga que você só pode ajudar com questões do Spot Render
-- Mas pode conversar sobre eventos atuais, cultura, etc.`;
+- Com links clicáveis quando mencionar páginas`;
 
 const WELCOME_MESSAGE: Message = {
   id: "welcome",
   role: "assistant",
-  content: `Olá! 👋 Eu sou o **Spotinho**, seu assistente virtual do Spot Render!
+  content: `Olá! 👋 Que bom ter você aqui no Spot Render!
 
-Estou aqui para ajudar você com suas dúvidas sobre a plataforma. Posso responder perguntas sobre:
+Sou o **Spotinho**, seu assistente virtual. Estou aqui para ajudar no que precisar!
 
-• Como enviar jobs de renderização
-• Formatos de arquivo aceitos
-• Estatísticas e métricas
-• Problemas técnicos
-• Documentação
+Puedo ayudarte con:
 
-Ou也可以 falar sobre eventos atuais! 🌍
+🤖 Dúvidas sobre a plataforma
+📤 Como enviar jobs de renderização
+📁 Formatos de arquivo aceitos
+📊 Ver estatísticas e métricas
+📚 Navegar pela documentação
+🔧 Problemas técnicos
 
-Como posso ajudar hoje? 😊`,
+E também posso conversar sobre outros assuntos! 😄
+
+O que você gostaria de saber hoje?`,
   timestamp: new Date(),
 };
 
@@ -113,11 +112,23 @@ export default function SpotinhoWidget() {
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMessages(loadMessages());
+    checkOllamaStatus();
   }, []);
+
+  const checkOllamaStatus = async () => {
+    try {
+      const api = process.env.NEXT_PUBLIC_API_URL || "http://api.spot-render.local";
+      const response = await axios.get<OllamaStatus>(`${api}/ai/status`, { timeout: 5000 });
+      setOllamaStatus(response.data);
+    } catch (error) {
+      setOllamaStatus({ available: false, model: "", base_url: "" });
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -152,7 +163,7 @@ export default function SpotinhoWidget() {
       const api = process.env.NEXT_PUBLIC_API_URL || "http://api.spot-render.local";
 
       const conversationContext = messages
-        .slice(-6)
+        .slice(-8)
         .map((m) => `${m.role}: ${m.content}`)
         .join("\n");
 
@@ -163,7 +174,7 @@ export default function SpotinhoWidget() {
           context: conversationContext,
           system_prompt: SYSTEM_PROMPT,
         },
-        { timeout: 90000 }
+        { timeout: 120000 }
       );
 
       const assistantMessage: Message = {
@@ -174,156 +185,46 @@ export default function SpotinhoWidget() {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+      checkOllamaStatus();
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
 
-      const fallbackResponse = getFallbackResponse(content);
-      const assistantMessage: Message = {
+      const offlineMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: fallbackResponse,
+        content: getOfflineResponse(),
         timestamp: new Date(),
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, offlineMessage]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getFallbackResponse = (userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase();
+  const getOfflineResponse = (): string => {
+    if (!ollamaStatus?.available) {
+      return `😔 O Spotinho está offline no momento!
 
-    if (lowerMessage.includes("format") || lowerMessage.includes("aceito") || lowerMessage.includes("arquivo") || lowerMessage.includes("extensão")) {
-      return `Os formatos aceitos pelo Spot Render são:
+Parece que o servidor de IA não está disponível. Tente novamente mais tarde.
 
-✅ **Diretamente aceitos:**
-• .fbx - Filmbox (recomendado!)
-• .obj - Wavefront
-• .blend - Blender
-• .gltf / .glb - glTF
-• .3ds, .stl, .ply, .dae, .dxf
+Enquanto isso, você pode:
+• Consultar a documentação: http://spot-render.local/docs
+• Ver as estatísticas: http://spot-render.local/statistics
+• Falar com o suporte da equipe
 
-❌ **Requerem conversão:**
-• .max (3ds Max) → exporte como .fbx
-• .ma/.mb (Maya) → exporte como .fbx
-• .ms (MEL Script) → abra no Maya e exporte .fbx
-
-📖 Para mais detalhes, consulte a documentação:
-[Ver formatos aceitos](http://spot-render.local/docs/converters/formats)
-
-Quer que eu explique como fazer a conversão? 😊`;
+Desculpe pelo transtorno! 😊`;
     }
 
-    if (lowerMessage.includes("estatístic") || lowerMessage.includes("stats") || lowerMessage.includes("métricas")) {
-      return `Você pode ver as estatísticas do Spot Render em:
+    return `❌ Ocorreu um erro ao processar sua mensagem.
 
-📊 **[http://spot-render.local/statistics](/statistics)** - Dashboard completo com:
-• Total de jobs
-• Taxa de sucesso
-• Tempo médio de render
-• Jobs por projeto e artista
-• Evolução diária
+Tente novamente em alguns segundos, por favor.
 
-Lá você pode filtrar por período, projeto e artista! 📈`;
-    }
-
-    if (lowerMessage.includes("direitos") || lowerMessage.includes("minorias") || lowerMessage.includes("social")) {
-      return `🌍 **Sobre meus valores:**
-
-Eu acredito em um mundo mais justo e igualitário!
-
-Acredito na importância de:
-• Diversidade e inclusão no tech 💜
-• Representatividade negra e indígena
-• Direitos das mulheres e LGBTQIA+
-• Acesso à tecnologia para todos
-• Tecnologia como ferramenta de transformação social
-
-Vamos juntos construir um futuro melhor! ✊🏳️‍🌈✊`;
-    }
-
-    if (lowerMessage.includes("copa") || lowerMessage.includes("brasil") || lowerMessage.includes("jogo")) {
-      return `⚽🇧🇷 **Vamos Brasil!**
-
-Como assistente engajado socialmente, celebro momentos importantes como a Copa do Mundo!
-
-Você sabia que o Brasil é o país com mais títulos de Copa do Mundo? São 5 títulos (1958, 1962, 1970, 1994, 2002)! 🏆
-
-Se precisar de ajuda com o Spot Render, estou aqui! 😊`;
-    }
-
-    if (lowerMessage.includes("job") || lowerMessage.includes("render") || lowerMessage.includes("enviar") || lowerMessage.includes("upload")) {
-      return `Para enviar um job de renderização:
-
-1️⃣ Acesse o portal em **[http://spot-render.local](/)** 
-2️⃣ Vá para a seção **"Enviar novo job"**
-3️⃣ Selecione os arquivos 3D (.fbx, .obj, etc)
-4️⃣ Anexe a render list (CSV ou XLSX)
-5️⃣ Escolha projeto, variação e artista
-6️⃣ Clique em **"Enviar"**
-
-📖 [Documentação completa de uploads](http://spot-render.local/docs/portal/upload)
-
-Depois é só acompanhar o progresso na tabela de jobs! 📋
-
-Posso ajudar com mais alguma coisa? 😊`;
-    }
-
-    if (lowerMessage.includes("documentação") || lowerMessage.includes("docs")) {
-      return `A documentação do Spot Render está em:
-
-📚 **[http://spot-render.local/docs](/docs)** - TechDocs
-
-Aqui você encontra:
-• Primeiros Passos
-• Documentação do Portal
-• Referência da API REST
-• Guia do CLI
-• Conversores de formato
-• Arquitetura de Workers
-• Infraestrutura AWS
-
-Use a barra de busca para encontrar tópicos específicos! 🔍`;
-    }
-
-    if (lowerMessage.includes("obrigad") || lowerMessage.includes("valeu") || lowerMessage.includes("thanks")) {
-      return `De nada! 😊
-
-Estou sempre aqui para ajudar! Se tiver mais dúvidas sobre o Spot Render, é só chamar!
-
-Até mais! 👋🌟`;
-    }
-
-    if (lowerMessage.includes("oi") || lowerMessage.includes("olá") || lowerMessage.includes("hey") || lowerMessage.includes("eai")) {
-      return `Olá! 👋 Que bom ter você aqui!
-
-Sou o Spotinho, seu assistente do Spot Render. Como posso ajudar hoje?
-
-• Dúvidas sobre a plataforma?
-• Problemas técnicos?
-• Quer saber sobre formatos aceitos?
-• Estatísticas?
-• Documentação?
-
-Estou à disposição! 😊`;
-    }
-
-    return `Entendi sua pergunta! 🤔
-
-Infelizmente ainda estou aprendendo algumas coisas. Aqui estão algumas opções:
-
-1. 📖 Acesse a documentação em **[http://spot-render.local/docs](/docs)**
-2. 📊 Veja as estatísticas em **[http://spot-render.local/statistics](/statistics)**
-3. 💬 Fale com o suporte da equipe
-
-Enquanto isso, vou registrar sua pergunta para melhorar minha resposta no futuro! 🌟
-
-Posso ajudar com algo mais? 😊`;
+Se o problema persistir, entre em contato com o suporte. 😊`;
   };
 
-  const handleSuggestionClick = (suggestion: Suggestion) => {
-    sendMessage(suggestion.text);
+  const handleSuggestionClick = (text: string) => {
+    sendMessage(text);
   };
 
   return (
@@ -346,7 +247,9 @@ Posso ajudar com algo mais? 😊`;
               </div>
               <div>
                 <h3>Spotinho 🤖</h3>
-                <span className="status">Online • IA ativa</span>
+                <span className="status">
+                  {ollamaStatus?.available ? "🟢 Online com IA" : "🔴 Offline"}
+                </span>
               </div>
             </div>
             <button className="close-btn" onClick={() => setIsOpen(false)}>
@@ -405,15 +308,15 @@ Posso ajudar com algo mais? 😊`;
           </div>
 
           <div className="suggestions">
-            {suggestions.map((s) => (
-              <button
-                key={s.id}
-                className="suggestion-btn"
-                onClick={() => handleSuggestionClick(s)}
-              >
-                {s.text}
-              </button>
-            ))}
+            <button className="suggestion-btn" onClick={() => handleSuggestionClick("Como enviar um job?")}>
+              Como enviar um job? 📤
+            </button>
+            <button className="suggestion-btn" onClick={() => handleSuggestionClick("Quais formatos são aceitos?")}>
+              Formatos aceitos 📁
+            </button>
+            <button className="suggestion-btn" onClick={() => handleSuggestionClick("Ver estatísticas")}>
+              Ver estatísticas 📊
+            </button>
           </div>
 
           <div className="chat-input">
@@ -441,9 +344,9 @@ Posso ajudar com algo mais? 😊`;
           </div>
 
           <div className="chat-footer">
-            <span>🤖 Spotinho - Assistente IA do Spot Render</span>
+            <span>🤖 Spotinho - IA do Spot Render</span>
             <span>•</span>
-            <a href="/docs" target="_blank" rel="noreferrer">Ver documentação</a>
+            <a href="/docs" target="_blank" rel="noreferrer">Documentação</a>
           </div>
         </div>
       )}
@@ -485,7 +388,7 @@ Posso ajudar com algo mais? 😊`;
             <circle cx="32" cy="54" r="2" fill="#22c55e"/>
           </svg>
         )}
-        {!isOpen && <span className="notification-badge">1</span>}
+        {!isOpen && ollamaStatus?.available && <span className="online-indicator" />}
       </button>
 
       <style jsx>{`
@@ -755,20 +658,15 @@ Posso ajudar com algo mais? 😊`;
           font-weight: bold;
         }
 
-        .notification-badge {
+        .online-indicator {
           position: absolute;
-          top: -2px;
-          right: -2px;
-          background: #ef4444;
-          color: white;
-          font-size: 0.7rem;
-          font-weight: bold;
-          width: 20px;
-          height: 20px;
+          bottom: 2px;
+          right: 2px;
+          width: 14px;
+          height: 14px;
+          background: #22c55e;
+          border: 2px solid white;
           border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
         }
 
         @media (max-width: 480px) {

@@ -2,7 +2,6 @@ import Head from "next/head";
 import Link from "next/link";
 import UploadForm from "../components/UploadForm";
 import JobsTable from "../components/JobsTable";
-import HealthBanner from "../components/HealthBanner";
 import SpotinhoWidget from "../components/SpotinhoWidget";
 
 export default function Home() {
@@ -51,22 +50,16 @@ export default function Home() {
             </div>
 
             <div className="hero__panel">
-              <HealthBanner />
-              <div className="hero__metrics">
-                <div>
-                  <span>Jobs ativos</span>
-                  <strong>12</strong>
-                  <small>Atualização a cada 15s</small>
-                </div>
-                <div>
-                  <span>Tempo médio</span>
-                  <strong>8m 21s</strong>
-                  <small>Últimos 50 envios</small>
-                </div>
-                <div>
-                  <span>Economia Spot</span>
-                  <strong>31%</strong>
-                  <small>vs. on-demand</small>
+              <div className="hero__welcome">
+                <h3>Bem-vindo ao Spot Render! 🎨</h3>
+                <p>Plataforma de renderização 3D colaborativa para estúdios e artistas.</p>
+                <div className="hero__quick-actions">
+                  <Link href="/docs" className="quick-action">
+                    📚 Ver documentação
+                  </Link>
+                  <Link href="/statistics" className="quick-action">
+                    📊 Estatísticas
+                  </Link>
                 </div>
               </div>
             </div>
@@ -268,6 +261,44 @@ export default function Home() {
 
         .hero__metrics small {
           color: #94a3b8;
+        }
+
+        .hero__welcome {
+          text-align: center;
+          padding: 1rem 0;
+        }
+
+        .hero__welcome h3 {
+          margin: 0 0 0.75rem;
+          font-size: 1.3rem;
+          color: #1e40af;
+        }
+
+        .hero__welcome p {
+          margin: 0 0 1.5rem;
+          color: #64748b;
+          font-size: 0.95rem;
+        }
+
+        .hero__quick-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+
+        .quick-action {
+          display: block;
+          padding: 0.75rem 1rem;
+          background: #eff6ff;
+          border-radius: 10px;
+          color: #1e40af;
+          text-decoration: none;
+          font-weight: 500;
+          transition: background 0.2s;
+        }
+
+        .quick-action:hover {
+          background: #dbeafe;
         }
 
         .content {
