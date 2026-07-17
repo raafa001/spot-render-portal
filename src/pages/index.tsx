@@ -1,10 +1,36 @@
 import Head from "next/head";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import axios from "axios";
 import UploadForm from "../components/UploadForm";
 import JobsTable from "../components/JobsTable";
 import SpotinhoWidget from "../components/SpotinhoWidget";
 
+interface QuickStats {
+  total: number;
+  running: number;
+  completed: number;
+}
+
 export default function Home() {
+  const [stats, setStats] = useState<QuickStats>({ total: 0, running: 0, completed: 0 });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const api = process.env.NEXT_PUBLIC_API_URL;
+      if (!api) return;
+      try {
+        const res = await axios.get<{ jobs: QuickStats }>(`${api}/jobs/statistics/summary`);
+        setStats(res.data.jobs);
+      } catch (e) {
+        console.error("Failed to fetch stats", e);
+      }
+    };
+    fetchStats();
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <>
       <Head>
@@ -53,6 +79,20 @@ export default function Home() {
               <div className="hero__welcome">
                 <h3>Bem-vindo ao Spot Render! 🎨</h3>
                 <p>Plataforma de renderização 3D colaborativa para estúdios e artistas.</p>
+                <div className="hero__metrics">
+                  <div className="metric">
+                    <strong>{stats.total}</strong>
+                    <span>Total Jobs</span>
+                  </div>
+                  <div className="metric">
+                    <strong>{stats.running}</strong>
+                    <span>Em Execução</span>
+                  </div>
+                  <div className="metric">
+                    <strong>{stats.completed}</strong>
+                    <span>Concluídos</span>
+                  </div>
+                </div>
                 <div className="hero__quick-actions">
                   <Link href="/docs" className="quick-action">
                     📚 Ver documentação
@@ -67,43 +107,15 @@ export default function Home() {
         </header>
 
         <main className="content">
-          <section className="feature-grid">
-            <article>
-              <h3>Upload seguro</h3>
-              <p>Listas e arquivos ficam confinados nas rotas do projeto. Nada é sincronizado fora do cluster local.</p>
-            </article>
-            <article>
-              <h3>Observabilidade pronta</h3>
-              <p>Alertas de canary, dashboards e métricas Kubernetes já versionados no repo de observabilidade.</p>
-            </article>
-            <article>
-              <h3>FinOps-first</h3>
-              <p>Workers usam spot + lifecycle S3 para reduzir custos sem abrir mão de velocidade.</p>
-            </article>
-          </section>
-
-          <section className="grid grid--two">
-            <article className="panel" id="upload-card">
-              <div className="panel__header">
-                <div>
-                  <p className="eyebrow">Submit</p>
-                  <h2>Enviar novo job</h2>
-                </div>
-                <p>Defina projeto, variação e anexos. Notificações opcionais para liberar o time.</p>
+          <section className="panel">
+            <div className="panel__header">
+              <div>
+                <p className="eyebrow">Submit</p>
+                <h2>Enviar novo job</h2>
               </div>
-              <UploadForm />
-            </article>
-
-            <aside className="panel tips">
-              <h3>Playbook rápido</h3>
-              <ul>
-                <li><strong>Hosts:</strong> `spot-render.local` + `api.spot-render.local` no /etc/hosts</li>
-                <li><strong>Storage:</strong> `/tmp/spot-render-storage/shared` com PVC persistente</li>
-                <li><strong>Port-forward:</strong> `kubectl -n spot-render port-forward svc/spot-render-web-stable 8081:80`</li>
-                <li><strong>Saída:</strong> todos os renders são exportados em PNG automaticamente</li>
-                <li><strong>CLI:</strong> exporte `STORAGE_MODE=local` para enviar lotes direto da estação</li>
-              </ul>
-            </aside>
+              <p>Defina projeto, variação e anexos. Notificações opcionais para liberar o time.</p>
+            </div>
+            <UploadForm />
           </section>
 
           <section className="panel">
@@ -261,6 +273,13 @@ export default function Home() {
 
         .hero__metrics small {
           color: #94a3b8;
+        }
+
+        .metric {
+          text-align: center;
+          padding: 0.75rem;
+          background: #f8fafc;
+          border-radius: 12px;
         }
 
         .hero__welcome {

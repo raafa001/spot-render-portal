@@ -122,8 +122,8 @@ export default function SpotinhoWidget() {
 
   const checkOllamaStatus = async () => {
     try {
-      const api = process.env.NEXT_PUBLIC_API_URL || "http://api.spot-render.local";
-      const response = await axios.get<OllamaStatus>(`${api}/ai/status`, { timeout: 5000 });
+      const apiUrl = process.env.NEXT_PUBLIC_AI_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://api.spot-render.local";
+      const response = await axios.get<OllamaStatus>(`${apiUrl}/ai/status`, { timeout: 5000 });
       setOllamaStatus(response.data);
     } catch (error) {
       setOllamaStatus({ available: false, model: "", base_url: "" });
@@ -160,7 +160,7 @@ export default function SpotinhoWidget() {
     setIsLoading(true);
 
     try {
-      const api = process.env.NEXT_PUBLIC_API_URL || "http://api.spot-render.local";
+      const apiUrl = process.env.NEXT_PUBLIC_AI_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://api.spot-render.local";
 
       const conversationContext = messages
         .slice(-8)
@@ -168,7 +168,7 @@ export default function SpotinhoWidget() {
         .join("\n");
 
       const response = await axios.post(
-        `${api}/ai/chat`,
+        `${apiUrl}/ai/chat`,
         {
           message: content,
           context: conversationContext,
