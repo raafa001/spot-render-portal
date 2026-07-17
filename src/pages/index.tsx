@@ -3,6 +3,7 @@ import Link from "next/link";
 import UploadForm from "../components/UploadForm";
 import JobsTable from "../components/JobsTable";
 import HealthBanner from "../components/HealthBanner";
+import SpotinhoWidget from "../components/SpotinhoWidget";
 
 export default function Home() {
   return (
@@ -383,6 +384,7 @@ export default function Home() {
           background: rgba(37, 99, 235, 0.2);
         }
       `}</style>
+      <SpotinhoWidget />
     </>
   );
 }

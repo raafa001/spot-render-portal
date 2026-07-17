@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-
 import Head from "next/head";
+import SpotinhoWidget from "../components/SpotinhoWidget";
 
 interface HealthComponent {
   name: string;
@@ -63,6 +63,7 @@ export default function Status() {
           border-color: #fecaca;
         }
       `}</style>
+      <SpotinhoWidget />
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Head from "next/head";
 import axios from "axios";
+import SpotinhoWidget from "../components/SpotinhoWidget";
 
 interface JobStatistics {
   total_jobs: number;
@@ -712,6 +713,7 @@ export default function StatisticsPage() {
         .dot.running { background: #8b5cf6; }
         .dot.queued { background: #0ea5e9; }
       `}</style>
+      <SpotinhoWidget />
     </>
   );
 }
