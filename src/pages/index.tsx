@@ -1,4 +1,5 @@
 import Head from "next/head";
+import Link from "next/link";
 import UploadForm from "../components/UploadForm";
 import JobsTable from "../components/JobsTable";
 import HealthBanner from "../components/HealthBanner";
@@ -15,7 +16,7 @@ export default function Home() {
           <div className="hero__nav">
             <div className="brand">Spot Render</div>
             <div className="hero__links">
-              <a href="/statistics">Estatísticas</a>
+              <Link href="/statistics">Estatísticas</Link>
               <a href="https://github.com/raafa001/spot-render" target="_blank" rel="noreferrer">
                 Repositórios
               </a>

@@ -221,7 +221,7 @@ export default function UploadForm() {
       <form onSubmit={handleSubmit} className="upload-form">
         <div className="form-grid">
           <label className="field">
-            <span>Arquivos de cena ({files.length} selecionado{s files.length !== 1 ? "s" : ""})</span>
+            <span>Arquivos de cena ({files.length} arquivo{files.length !== 1 ? "s" : ""} selecionado{files.length !== 1 ? "s" : ""})</span>
             <input
               type="file"
               accept={supportedFormats.join(",")}
