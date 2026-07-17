@@ -312,25 +312,24 @@ export default function TechDocs() {
         }
 
         .quick-link {
-          background: white;
-          border: 1px solid #e2e8f0;
+          background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%);
+          border: none;
           border-radius: 12px;
           padding: 0.75rem 1.25rem;
           text-decoration: none;
-          color: #0f172a;
+          color: white;
           display: flex;
           align-items: center;
           gap: 0.5rem;
           font-weight: 500;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+          box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
           transition: all 0.2s;
         }
 
         .quick-link:hover {
-          background: #f8fafc;
-          border-color: #cbd5e1;
           transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+          box-shadow: 0 6px 16px rgba(30, 64, 175, 0.4);
+          color: white;
         }
 
         .quick-icon {

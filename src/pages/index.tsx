@@ -21,9 +21,9 @@ export default function Home() {
               <a href="https://github.com/raafa001/spot-render" target="_blank" rel="noreferrer">
                 Repositórios
               </a>
-              <a href="https://backstage.spot-render.local/docs" target="_blank" rel="noreferrer">
+              <Link href="/docs">
                 TechDocs
-              </a>
+              </Link>
               <button onClick={() => document.getElementById("upload-card")?.scrollIntoView({ behavior: "smooth" })}>Enviar job</button>
             </div>
           </div>

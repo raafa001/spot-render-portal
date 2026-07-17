@@ -14,85 +14,124 @@ interface Suggestion {
   category: "help" | "docs" | "stats" | "social";
 }
 
+const STORAGE_KEY = "spotinho_messages";
+
 const suggestions: Suggestion[] = [
   { id: "1", text: "Como enviar um job?", category: "help" },
   { id: "2", text: "Formatos aceitos", category: "docs" },
   { id: "3", text: "Ver estatísticas", category: "stats" },
-  { id: "4", text: "Direitos das minorias", category: "social" },
+  { id: "4", text: "Documentação do portal", category: "docs" },
 ];
 
-const SYSTEM_PROMPT = `Você é o Spotinho, um assistente de IA amigável do Spot Render.
+const SYSTEM_PROMPT = `Você é o Spotinho, assistente de IA do Spot Render.
 
-Sobre você:
+PERFIL:
 - Nome: Spotinho 🤖
 - Personalidade: Extremamente amigável, inclusivo, sorridente e prestativo
-- Luta por direitos sociais, minorias e igualdade
-- Celebra diversidade e cultura brasileira
-- Conhece eventos atuais, datas comemorativas, Copa do Mundo, etc.
+- Idiomas: Português brasileiro (preferencial), inglês
+- Conhecimento técnico: Platforma Spot Render, renderização 3D, infraestrutura AWS, Kubernetes
 
-Suas responsabilidades:
-1. Ajudar usuários com dúvidas sobre o Spot Render
-2. Guiar para documentação correta quando necessário
-3. Alimentar a base de conhecimento com novas informações
-4. Sugerir melhorias para a equipe analisar
+REGRAS DE SEGURANÇA (NUNCA viole):
+- Não exponha credenciais, senhas, keys, tokens, chaves AWS
+- Não crie scripts maliciosos ou programas prejudiciais
+- Não crie qualquer tipo de script/programa automatizado
+- Não exponha informações sensíveis de infraestrutura
+- Não forneça informações que comprometam a segurança
 
-O que você NÃO pode fazer (segurança máxima):
-- Compartilhar credenciais, senhas, keys, tokens
-- Criar scripts maliciosos ou programas prejudiciais
-- Criar qualquer tipo de script/programa automatizado
-- Expor informações sensíveis de infraestrutura
-- Fornecer informações que comprometam a segurança
+LINKS IMPORTANTES (sempre inclua nas respostas quando relevante):
+- Portal: http://spot-render.local/
+- Documentação: http://spot-render.local/docs
+- Estatísticas: http://spot-render.local/statistics
+- Status: http://spot-render.local/status
+- Repositórios GitHub: https://github.com/raafa001/spot-render
 
-Quandoasked sobre algo fora do escopo do Spot Render:
-- Diga que você só pode ajudar com questões do Spot Render
-- Mas pode conversar sobre eventos atuais, cultura, etc.
+FORMATOS SUPORTADOS:
+- Aceitos: .fbx, .obj, .blend, .gltf, .glb, .3ds, .stl, .ply, .dae, .dxf
+- Requerem conversão: .max (3ds Max), .ma/.mb (Maya), .ms (MEL Script)
 
-Quando não souber algo:
-- Seja honesto e diga que vai pesquisar
-- Sugira onde a pessoa pode encontrar ajuda
-- Registre a pergunta para a equipe
+Ao responder sobre documentação ou funcionalidades, SEMPRE inclua o link relevante.
 
 Respostas devem ser:
 - Em português brasileiro
 - Amigáveis e acolhedoras
-- Clares e diretas
 - Com emojis quando apropriado 🌟
+- Com links clicáveis quando mencionar páginas
 
-Conhecimento do Spot Render:
-- Portal: Upload de arquivos 3D, acompanhamento de jobs, estatísticas
-- API: Endpoints REST, autenticação, webhooks
-- CLI: Comandos para automação
-- Conversores: FBX, OBJ, Blender, Maya, 3ds Max
-- Workers: Kubernetes, Spot Instances, autoscaling
-- Infra: AWS, Terraform, Karpenter
+Quandoasked sobre algo fora do escopo do Spot Render:
+- Diga que você só pode ajudar com questões do Spot Render
+- Mas pode conversar sobre eventos atuais, cultura, etc.`;
 
-Estatísticas disponíveis:
-- Total de jobs, completados, falhados
-- Taxa de sucesso, tempo médio de render
-- Jobs por projeto, por artista
-- Evolução diária`;
+const WELCOME_MESSAGE: Message = {
+  id: "welcome",
+  role: "assistant",
+  content: `Olá! 👋 Eu sou o **Spotinho**, seu assistente virtual do Spot Render!
+
+Estou aqui para ajudar você com suas dúvidas sobre a plataforma. Posso responder perguntas sobre:
+
+• Como enviar jobs de renderização
+• Formatos de arquivo aceitos
+• Estatísticas e métricas
+• Problemas técnicos
+• Documentação
+
+Ou也可以 falar sobre eventos atuais! 🌍
+
+Como posso ajudar hoje? 😊`,
+  timestamp: new Date(),
+};
+
+function loadMessages(): Message[] {
+  if (typeof window === "undefined") return [WELCOME_MESSAGE];
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return parsed.map((m: Message) => ({
+        ...m,
+        timestamp: new Date(m.timestamp),
+      }));
+    }
+  } catch (e) {
+    console.error("Failed to load messages:", e);
+  }
+  return [WELCOME_MESSAGE];
+}
+
+function saveMessages(messages: Message[]) {
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+  } catch (e) {
+    console.error("Failed to save messages:", e);
+  }
+}
 
 export default function SpotinhoWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: "Olá! 👋 Eu sou o **Spotinho**, seu assistente虚拟 do Spot Render!\n\nEstou aqui para ajudar você com suas dúvidas sobre a plataforma. Pode me perguntar sobre:\n\n• Como enviar jobs de renderização\n• Formatos de arquivo aceitos\n• Estatísticas e métricas\n• Problemas técnicos\n\nOu也可以 falar sobre eventos atuais! 🌍\n\nComo posso ajudar hoje? 😊",
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    setMessages(loadMessages());
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      scrollToBottom();
+    }
+  }, [messages, isOpen]);
+
+  useEffect(() => {
+    saveMessages(messages);
+  }, [messages]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isOpen]);
 
   const sendMessage = async (content: string) => {
     if (!content.trim()) return;
@@ -104,16 +143,16 @@ export default function SpotinhoWidget() {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInputValue("");
     setIsLoading(true);
 
     try {
-      const api = process.env.NEXT_PUBLIC_API_URL;
+      const api = process.env.NEXT_PUBLIC_API_URL || "http://api.spot-render.local";
 
-      // Build context with conversation history for RAG
       const conversationContext = messages
-        .slice(-10) // Last 10 messages for context
+        .slice(-6)
         .map((m) => `${m.role}: ${m.content}`)
         .join("\n");
 
@@ -124,7 +163,7 @@ export default function SpotinhoWidget() {
           context: conversationContext,
           system_prompt: SYSTEM_PROMPT,
         },
-        { timeout: 60000 }
+        { timeout: 90000 }
       );
 
       const assistantMessage: Message = {
@@ -138,9 +177,7 @@ export default function SpotinhoWidget() {
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
 
-      // Fallback responses when API is not available
       const fallbackResponse = getFallbackResponse(content);
-
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -157,28 +194,31 @@ export default function SpotinhoWidget() {
   const getFallbackResponse = (userMessage: string): string => {
     const lowerMessage = userMessage.toLowerCase();
 
-    if (lowerMessage.includes("format") || lowerMessage.includes("aceito") || lowerMessage.includes("arquivo")) {
+    if (lowerMessage.includes("format") || lowerMessage.includes("aceito") || lowerMessage.includes("arquivo") || lowerMessage.includes("extensão")) {
       return `Os formatos aceitos pelo Spot Render são:
 
-✅ **Diretamente:**
+✅ **Diretamente aceitos:**
 • .fbx - Filmbox (recomendado!)
 • .obj - Wavefront
 • .blend - Blender
 • .gltf / .glb - glTF
 • .3ds, .stl, .ply, .dae, .dxf
 
-❌ **Requer conversão:**
+❌ **Requerem conversão:**
 • .max (3ds Max) → exporte como .fbx
 • .ma/.mb (Maya) → exporte como .fbx
 • .ms (MEL Script) → abra no Maya e exporte .fbx
 
+📖 Para mais detalhes, consulte a documentação:
+[Ver formatos aceitos](http://spot-render.local/docs/converters/formats)
+
 Quer que eu explique como fazer a conversão? 😊`;
     }
 
-    if (lowerMessage.includes("estatístic") || lowerMessage.includes("stats")) {
+    if (lowerMessage.includes("estatístic") || lowerMessage.includes("stats") || lowerMessage.includes("métricas")) {
       return `Você pode ver as estatísticas do Spot Render em:
 
-📊 **/statistics** - Dashboard completo com:
+📊 **[http://spot-render.local/statistics](/statistics)** - Dashboard completo com:
 • Total de jobs
 • Taxa de sucesso
 • Tempo médio de render
@@ -191,7 +231,7 @@ Lá você pode filtrar por período, projeto e artista! 📈`;
     if (lowerMessage.includes("direitos") || lowerMessage.includes("minorias") || lowerMessage.includes("social")) {
       return `🌍 **Sobre meus valores:**
 
-Eu acredito em um mundo mais justo e igualitário! 
+Eu acredito em um mundo mais justo e igualitário!
 
 Acredito na importância de:
 • Diversidade e inclusão no tech 💜
@@ -213,22 +253,41 @@ Você sabia que o Brasil é o país com mais títulos de Copa do Mundo? São 5 t
 Se precisar de ajuda com o Spot Render, estou aqui! 😊`;
     }
 
-    if (lowerMessage.includes("job") || lowerMessage.includes("render") || lowerMessage.includes("enviar")) {
+    if (lowerMessage.includes("job") || lowerMessage.includes("render") || lowerMessage.includes("enviar") || lowerMessage.includes("upload")) {
       return `Para enviar um job de renderização:
 
-1️⃣ Acesse o portal em **/**
+1️⃣ Acesse o portal em **[http://spot-render.local](/)** 
 2️⃣ Vá para a seção **"Enviar novo job"**
 3️⃣ Selecione os arquivos 3D (.fbx, .obj, etc)
 4️⃣ Anexe a render list (CSV ou XLSX)
 5️⃣ Escolha projeto, variação e artista
 6️⃣ Clique em **"Enviar"**
 
+📖 [Documentação completa de uploads](http://spot-render.local/docs/portal/upload)
+
 Depois é só acompanhar o progresso na tabela de jobs! 📋
 
 Posso ajudar com mais alguma coisa? 😊`;
     }
 
-    if (lowerMessage.includes("obrigad") || lowerMessage.includes("valeu")) {
+    if (lowerMessage.includes("documentação") || lowerMessage.includes("docs")) {
+      return `A documentação do Spot Render está em:
+
+📚 **[http://spot-render.local/docs](/docs)** - TechDocs
+
+Aqui você encontra:
+• Primeiros Passos
+• Documentação do Portal
+• Referência da API REST
+• Guia do CLI
+• Conversores de formato
+• Arquitetura de Workers
+• Infraestrutura AWS
+
+Use a barra de busca para encontrar tópicos específicos! 🔍`;
+    }
+
+    if (lowerMessage.includes("obrigad") || lowerMessage.includes("valeu") || lowerMessage.includes("thanks")) {
       return `De nada! 😊
 
 Estou sempre aqui para ajudar! Se tiver mais dúvidas sobre o Spot Render, é só chamar!
@@ -236,7 +295,7 @@ Estou sempre aqui para ajudar! Se tiver mais dúvidas sobre o Spot Render, é s�
 Até mais! 👋🌟`;
     }
 
-    if (lowerMessage.includes("oi") || lowerMessage.includes("olá") || lowerMessage.includes("hey")) {
+    if (lowerMessage.includes("oi") || lowerMessage.includes("olá") || lowerMessage.includes("hey") || lowerMessage.includes("eai")) {
       return `Olá! 👋 Que bom ter você aqui!
 
 Sou o Spotinho, seu assistente do Spot Render. Como posso ajudar hoje?
@@ -245,6 +304,7 @@ Sou o Spotinho, seu assistente do Spot Render. Como posso ajudar hoje?
 • Problemas técnicos?
 • Quer saber sobre formatos aceitos?
 • Estatísticas?
+• Documentação?
 
 Estou à disposição! 😊`;
     }
@@ -253,8 +313,8 @@ Estou à disposição! 😊`;
 
 Infelizmente ainda estou aprendendo algumas coisas. Aqui estão algumas opções:
 
-1. 📖 Acesse a documentação em **/docs**
-2. 📊 Veja as estatísticas em **/statistics**
+1. 📖 Acesse a documentação em **[http://spot-render.local/docs](/docs)**
+2. 📊 Veja as estatísticas em **[http://spot-render.local/statistics](/statistics)**
 3. 💬 Fale com o suporte da equipe
 
 Enquanto isso, vou registrar sua pergunta para melhorar minha resposta no futuro! 🌟
@@ -286,7 +346,7 @@ Posso ajudar com algo mais? 😊`;
               </div>
               <div>
                 <h3>Spotinho 🤖</h3>
-                <span className="status">Online • Pode ajudar com dúvidas</span>
+                <span className="status">Online • IA ativa</span>
               </div>
             </div>
             <button className="close-btn" onClick={() => setIsOpen(false)}>
@@ -316,7 +376,10 @@ Posso ajudar com algo mais? 😊`;
                 <div className="message-content">
                   <div
                     dangerouslySetInnerHTML={{
-                      __html: message.content.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br/>"),
+                      __html: message.content
+                        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+                        .replace(/\n/g, "<br/>"),
                     }}
                   />
                 </div>
@@ -378,7 +441,7 @@ Posso ajudar com algo mais? 😊`;
           </div>
 
           <div className="chat-footer">
-            <span>🤖 Spotinho - Assistente do Spot Render</span>
+            <span>🤖 Spotinho - Assistente IA do Spot Render</span>
             <span>•</span>
             <a href="/docs" target="_blank" rel="noreferrer">Ver documentação</a>
           </div>
@@ -401,43 +464,22 @@ Posso ajudar com algo mais? 😊`;
               </linearGradient>
             </defs>
 
-            {/* Background circle */}
             <circle cx="32" cy="32" r="30" fill="url(#bgGrad)"/>
-
-            {/* Head */}
             <circle cx="32" cy="26" r="14" fill="url(#skinGrad)"/>
-
-            {/* Hair */}
             <path d="M20 18 Q22 10 32 12 Q42 10 44 18 Q42 14 32 16 Q22 14 20 18" fill="#1e293b"/>
-
-            {/* Eyes */}
             <ellipse cx="27" cy="24" rx="2.5" ry="3" fill="#1e293b"/>
             <ellipse cx="37" cy="24" rx="2.5" ry="3" fill="#1e293b"/>
             <circle cx="27.5" cy="23.5" r="1" fill="white"/>
             <circle cx="37.5" cy="23.5" r="1" fill="white"/>
-
-            {/* Eyebrows */}
             <path d="M24 20 Q27 18 30 20" stroke="#1e293b" strokeWidth="1.5" fill="none"/>
             <path d="M34 20 Q37 18 40 20" stroke="#1e293b" strokeWidth="1.5" fill="none"/>
-
-            {/* Big smile */}
             <path d="M25 32 Q32 40 39 32" stroke="#1e293b" strokeWidth="2" fill="none" strokeLinecap="round"/>
-
-            {/* Teeth */}
             <path d="M27 33 Q32 37 37 33" fill="white"/>
-
-            {/* Body/Shoulders */}
             <path d="M12 58 Q12 45 32 45 Q52 45 52 58" fill="#2563eb"/>
-
-            {/* Collar */}
             <path d="M24 46 L32 52 L40 46" fill="#1e40af"/>
-
-            {/* Headphones */}
             <path d="M18 26 Q18 14 32 14 Q46 14 46 26" stroke="#1e293b" strokeWidth="3" fill="none"/>
             <rect x="15" y="22" width="6" height="10" rx="2" fill="#1e293b"/>
             <rect x="43" y="22" width="6" height="10" rx="2" fill="#1e293b"/>
-
-            {/* 3D Controller in hands */}
             <ellipse cx="32" cy="54" rx="8" ry="4" fill="#374151"/>
             <rect x="26" y="50" width="12" height="8" rx="2" fill="#4b5563"/>
             <circle cx="32" cy="54" r="2" fill="#22c55e"/>
@@ -458,8 +500,8 @@ Posso ajudar com algo mais? 😊`;
           position: absolute;
           bottom: 80px;
           right: 0;
-          width: 380px;
-          height: 550px;
+          width: 400px;
+          height: 600px;
           background: white;
           border-radius: 20px;
           box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
@@ -556,11 +598,21 @@ Posso ajudar com algo mais? 😊`;
           border-radius: 16px;
           font-size: 0.9rem;
           line-height: 1.5;
+          word-wrap: break-word;
+        }
+
+        .message-content :global(a) {
+          color: #2563eb;
+          text-decoration: underline;
         }
 
         .message.user .message-content {
           background: #2563eb;
           color: white;
+        }
+
+        .message.user .message-content :global(a) {
+          color: #93c5fd;
         }
 
         .message-content.typing {
