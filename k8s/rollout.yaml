@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: spot-render-web
-          image: 000000000000.dkr.ecr.us-east-1.amazonaws.com/spot-render-web:sha-2030aa2
+          image: 000000000000.dkr.ecr.us-east-1.amazonaws.com/spot-render-web:sha-2030aa3
           ports:
             - containerPort: 3000
           readinessProbe:

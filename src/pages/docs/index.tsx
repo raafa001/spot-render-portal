@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import SpotinhoWidget from "../../components/SpotinhoWidget";
 import { LanguageSelector } from "../../components/LanguageSelector";
+import { getApiUrl } from "../../utils/apiUtils";
 
 interface DocSection {
   id: string;
@@ -164,10 +165,8 @@ export default function TechDocs() {
     setShowResults(true);
 
     try {
-      const api = process.env.NEXT_PUBLIC_API_URL || "http://api.spot-render.local";
-
       const response = await axios.post(
-        `${api}/ai/chat`,
+        `${getApiUrl()}/ai/chat`,
         {
           message: `Busque na documentação do Spot Render por: "${query}". Liste os links mais relevantes encontrados. Formato: título - link - descrição breve.`,
           context: `Categoria desejada: ${filter === 'all' ? 'todas' : filter}.`,

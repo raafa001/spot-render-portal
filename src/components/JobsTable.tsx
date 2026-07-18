@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
+import { getApiUrl } from "../utils/apiUtils";
 
 interface Job {
   id: string;
@@ -89,13 +90,11 @@ export default function JobsTable() {
   const [loadingJobId, setLoadingJobId] = useState<string | null>(null);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [resumeWarning, setResumeWarning] = useState<ResumeResponse | null>(null);
-  const apiBase = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+  const apiBase = getApiUrl();
 
   const fetchJobs = useCallback(async () => {
-    const api = process.env.NEXT_PUBLIC_API_URL;
-    if (!api) return;
     try {
-      const res = await axios.get<Job[]>(`${api}/jobs/`);
+      const res = await axios.get<Job[]>(`${getApiUrl()}/jobs/`);
       setJobs(res.data);
     } catch (error) {
       console.error("Erro ao buscar jobs:", error);
@@ -110,14 +109,12 @@ export default function JobsTable() {
 
   const handleCancel = useCallback(
     async (job: Job) => {
-      const api = process.env.NEXT_PUBLIC_API_URL;
-      if (!api) return;
       if (!window.confirm(`Cancelar o job ${job.project}/${job.variation}?`)) {
         return;
       }
       setLoadingJobId(job.id);
       try {
-        await axios.post(`${api}/jobs/${job.id}/cancel`);
+        await axios.post(`${getApiUrl()}/jobs/${job.id}/cancel`);
         await fetchJobs();
       } catch (error) {
         console.error(error);
@@ -131,14 +128,12 @@ export default function JobsTable() {
 
   const handleResume = useCallback(
     async (job: Job) => {
-      const api = process.env.NEXT_PUBLIC_API_URL;
-      if (!api) return;
       if (!window.confirm(`Retomar o job ${job.project}/${job.variation}?`)) {
         return;
       }
       setLoadingJobId(job.id);
       try {
-        const res = await axios.post<ResumeResponse>(`${api}/jobs/${job.id}/resume`);
+        const res = await axios.post<ResumeResponse>(`${getApiUrl()}/jobs/${job.id}/resume`);
         const response = res.data;
 
         if (response.already_rendered_files && response.already_rendered_files.length > 0) {
@@ -169,14 +164,12 @@ export default function JobsTable() {
 
   const handleDelete = useCallback(
     async (job: Job) => {
-      const api = process.env.NEXT_PUBLIC_API_URL;
-      if (!api) return;
       if (!window.confirm(`Excluir definitivamente o job ${job.project}/${job.variation}? Esta ação não pode ser desfeita.`)) {
         return;
       }
       setLoadingJobId(job.id);
       try {
-        await axios.delete(`${api}/jobs/${job.id}`);
+        await axios.delete(`${getApiUrl()}/jobs/${job.id}`);
         await fetchJobs();
       } catch (error) {
         console.error(error);
@@ -190,13 +183,11 @@ export default function JobsTable() {
 
   const handleRemoveFile = useCallback(
     async (jobId: string, fileId: string, filename: string) => {
-      const api = process.env.NEXT_PUBLIC_API_URL;
-      if (!api) return;
       if (!window.confirm(`Remover o arquivo ${filename} do job?`)) {
         return;
       }
       try {
-        await axios.delete(`${api}/jobs/${jobId}/files/${fileId}`);
+        await axios.delete(`${getApiUrl()}/jobs/${jobId}/files/${fileId}`);
         await fetchJobs();
         alert("Arquivo removido com sucesso.");
       } catch (error: unknown) {

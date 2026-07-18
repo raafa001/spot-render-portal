@@ -6,6 +6,7 @@ import UploadForm from "../components/UploadForm";
 import JobsTable from "../components/JobsTable";
 import SpotinhoWidget from "../components/SpotinhoWidget";
 import { LanguageSelector } from "../components/LanguageSelector";
+import { getApiUrl } from "../utils/apiUtils";
 
 interface QuickStats {
   total: number;
@@ -18,10 +19,8 @@ export default function Home() {
 
   useEffect(() => {
     const fetchStats = async () => {
-      const api = process.env.NEXT_PUBLIC_API_URL;
-      if (!api) return;
       try {
-        const res = await axios.get<{ jobs: QuickStats }>(`${api}/jobs/statistics/summary`);
+        const res = await axios.get<{ jobs: QuickStats }>(`${getApiUrl()}/jobs/statistics/summary`);
         setStats(res.data.jobs);
       } catch (e) {
         console.error("Failed to fetch stats", e);

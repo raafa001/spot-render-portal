@@ -4,6 +4,7 @@ import Head from "next/head";
 import Link from "next/link";
 import SpotinhoWidget from "../components/SpotinhoWidget";
 import { LanguageSelector } from "../components/LanguageSelector";
+import { getApiUrl } from "../utils/apiUtils";
 
 interface HealthComponent {
   name: string;
@@ -20,9 +21,7 @@ export default function Status() {
   const [health, setHealth] = useState<HealthSummary | null>(null);
 
   useEffect(() => {
-    const api = process.env.NEXT_PUBLIC_API_URL;
-    if (!api) return;
-    axios.get<HealthSummary>(`${api}/health/summary`).then((res) => setHealth(res.data));
+    axios.get<HealthSummary>(`${getApiUrl()}/health/summary`).then((res) => setHealth(res.data));
   }, []);
 
   return (

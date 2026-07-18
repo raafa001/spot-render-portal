@@ -10,6 +10,7 @@ import axios from "axios";
 import Head from "next/head";
 import Link from "next/link";
 import { getClientInfo, formatClientInfo, ClientInfo } from "../utils/clientInfo";
+import { getAiUrl } from "../utils/apiUtils";
 import {
   VoiceSettings,
   loadVoiceSettings,
@@ -420,8 +421,7 @@ export default function ChatPage() {
 
   const checkOllamaStatus = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_AI_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://api.spot-render.local";
-      const response = await axios.get<OllamaStatus>(`${apiUrl}/ai/status`, { timeout: 5000 });
+      const response = await axios.get<OllamaStatus>(`${getAiUrl()}/ai/status`, { timeout: 5000 });
       setOllamaStatus(response.data);
     } catch (error) {
       setOllamaStatus({ available: false, model: "", base_url: "" });
@@ -448,8 +448,6 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_AI_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://api.spot-render.local";
-
       const conversationContext = messages
         .slice(-10)
         .map((m) => `${m.role}: ${m.content}`)
@@ -470,7 +468,7 @@ export default function ChatPage() {
       const fullContext = conversationContext + deviceContext + userCtxStr + langInstruction;
 
       const response = await axios.post(
-        `${apiUrl}/ai/chat`,
+        `${getAiUrl()}/ai/chat`,
         {
           message: content,
           context: fullContext,

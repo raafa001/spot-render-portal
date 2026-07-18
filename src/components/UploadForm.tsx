@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { getApiUrl } from "../utils/apiUtils";
 
 interface ProjectRoute {
   name: string;
@@ -68,11 +69,8 @@ export default function UploadForm() {
   const [validationErrors, setValidationErrors] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
-    const api = process.env.NEXT_PUBLIC_API_URL;
-    if (!api) return;
-
     // Fetch projects
-    axios.get<ProjectRoute[]>(`${api}/projects/`).then((res) => {
+    axios.get<ProjectRoute[]>(`${getApiUrl()}/projects/`).then((res) => {
       setProjects(res.data);
       if (res.data.length > 0) {
         setProject(res.data[0].name);
@@ -80,7 +78,7 @@ export default function UploadForm() {
     });
 
     // Fetch format documentation
-    axios.get<FormatDocumentation>(`${api}/uploads/supported-formats`).then((res) => {
+    axios.get<FormatDocumentation>(`${getApiUrl()}/uploads/supported-formats`).then((res) => {
       setFormatDoc(res.data);
     }).catch(err => {
       console.error("Erro ao buscar formatos:", err);
@@ -150,9 +148,6 @@ export default function UploadForm() {
   }
 
   async function validateFile(file: File): Promise<{ valid: boolean; message: string }> {
-    const api = process.env.NEXT_PUBLIC_API_URL;
-    if (!api) return { valid: false, message: "API não configurada" };
-
     try {
       if (!isValidExtension(file.name)) {
         const unsupported = getUnsupportedFormat(file.name);
@@ -177,12 +172,6 @@ export default function UploadForm() {
     }
     if (!renderList) {
       alert("Anexe uma render list (obrigatória)");
-      return;
-    }
-
-    const api = process.env.NEXT_PUBLIC_API_URL;
-    if (!api) {
-      alert("NEXT_PUBLIC_API_URL não configurado");
       return;
     }
 
@@ -221,7 +210,7 @@ export default function UploadForm() {
       if (isCorrection) form.append("is_correction", "true");
       form.append("renderlist", renderList);
 
-      const endpoint = files.length > 1 ? `${api}/uploads/multi` : `${api}/uploads/`;
+      const endpoint = files.length > 1 ? `${getApiUrl()}/uploads/multi` : `${getApiUrl()}/uploads/`;
       const response = await axios.post<JobResponse>(endpoint, form);
 
       setLastJob(response.data);

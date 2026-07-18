@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import axios from "axios";
+import { getApiUrl } from "../utils/apiUtils";
 
 interface HealthComponent {
   name: string;
@@ -17,12 +18,9 @@ export default function HealthBanner() {
   const [health, setHealth] = useState<HealthSummary | null>(null);
 
   useEffect(() => {
-    const api = process.env.NEXT_PUBLIC_API_URL;
-    if (!api) return;
-
     async function fetchHealth() {
       try {
-        const res = await axios.get<HealthSummary>(`${api}/health/summary`);
+        const res = await axios.get<HealthSummary>(`${getApiUrl()}/health/summary`);
         setHealth(res.data);
       } catch (error) {
         setHealth({ overall: "degraded", components: [{ name: "api", healthy: false, details: "Erro ao consultar" }] });

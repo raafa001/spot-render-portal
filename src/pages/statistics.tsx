@@ -4,6 +4,7 @@ import Link from "next/link";
 import axios from "axios";
 import SpotinhoWidget from "../components/SpotinhoWidget";
 import { LanguageSelector } from "../components/LanguageSelector";
+import { getApiUrl } from "../utils/apiUtils";
 
 interface JobStatistics {
   total_jobs: number;
@@ -60,9 +61,6 @@ export default function StatisticsPage() {
   const [artistFilter, setArtistFilter] = useState("");
 
   const fetchStatistics = useCallback(async () => {
-    const api = process.env.NEXT_PUBLIC_API_URL;
-    if (!api) return;
-
     setLoading(true);
     try {
       // Build date parameters
@@ -99,7 +97,7 @@ export default function StatisticsPage() {
 
       // Fetch summary statistics
       const statsRes = await axios.get<StatisticsResponse>(
-        `${api}/jobs/statistics/summary?${params.toString()}`
+        `${getApiUrl()}/jobs/statistics/summary?${params.toString()}`
       );
       setStats(statsRes.data);
 
@@ -111,7 +109,7 @@ export default function StatisticsPage() {
       if (artistFilter) dailyParams.append("artist", artistFilter);
 
       const dailyRes = await axios.get<DailyStatistics[]>(
-        `${api}/jobs/statistics/daily?${dailyParams.toString()}`
+        `${getApiUrl()}/jobs/statistics/daily?${dailyParams.toString()}`
       );
       setDailyStats(dailyRes.data);
     } catch (error) {
