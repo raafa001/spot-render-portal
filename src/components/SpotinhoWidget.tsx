@@ -17,7 +17,10 @@ import {
   getVoicesByLanguage,
   isRecognitionSupported,
   MediaStreamState,
+  SUPPORTED_LANGUAGES,
+  LanguageConfig,
 } from "../utils/voiceUtils";
+import { useLanguage } from "./LanguageSelector";
 
 interface Message {
   id: string;
@@ -47,12 +50,13 @@ interface JobInfo {
 const STORAGE_KEY = "spotinho_messages";
 const USER_INFO_KEY = "spotinho_user_info";
 
-const SYSTEM_PROMPT = `Você é o Spotinho, assistente de IA do Spot Render.
+const SYSTEM_PROMPTS: Record<string, string> = {
+  'pt-BR': `Você é o Spotinho, assistente de IA do Spot Render.
 
 PERFIL:
 - Nome: Spotinho 🤖
 - Personalidade: Extremamente amigável, inclusivo, sorridente e prestativo
-- Idiomas: Português brasileiro (preferencial), inglês
+- Idiomas: Português brasileiro (preferencial)
 - Conhecimento técnico: Plataforma Spot Render, renderização 3D, infraestrutura AWS, Kubernetes
 
 REGRAS DE SEGURANÇA (NUNCA viole):
@@ -70,7 +74,7 @@ CAPACIDADES ESPECIAIS:
 
 INTEGRAÇÃO COM JOBS:
 Para criar um job, você precisa coletar:
-1. Arquivos de cena (arquivos .fbx, .obj, .blend, etc.)
+1. Arquivos de cena (arquivos .fbx, .obj, .blend, .gltf, .glb, .3ds, .stl, .ply, .dae, .dxf)
 2. Nome do projeto
 3. Variação/correção (ex: v1, v2, correção)
 4. Nome do artista
@@ -111,16 +115,143 @@ Respostas devem ser:
 - Amigáveis e acolhedoras
 - Com emojis quando apropriado 🌟
 - Com links clicáveis quando mencionar páginas
-- Voz: Se a síntese de voz estiver ativada, leia suas respostas em voz alta`;
+- Voz: Se a síntese de voz estiver ativada, leia suas respostas em voz alta`,
+  'en-US': `You are Spotinho, AI assistant at Spot Render.
 
-const WELCOME_MESSAGE: Message = {
-  id: "welcome",
-  role: "assistant",
-  content: `Olá! 👋 Que bom ter você aqui no Spot Render!
+PROFILE:
+- Name: Spotinho 🤖
+- Personality: Extremely friendly, inclusive, smiling and helpful
+- Languages: English (preferred)
+- Technical knowledge: Spot Render platform, 3D rendering, AWS infrastructure, Kubernetes
+
+SAFETY RULES (NEVER violate):
+- Do not expose credentials, passwords, keys, tokens, AWS keys
+- Do not create malicious scripts or harmful programs
+- Do not create any type of automated script/program
+- Do not expose sensitive infrastructure information
+- Do not provide information that compromises security
+
+SPECIAL CAPABILITIES:
+- You can create rendering jobs by asking the user for necessary information
+- You can see the user's device/browser information
+- You can speak with the user using voice synthesis
+- You can receive voice commands
+
+JOB INTEGRATION:
+To create a job, you need to collect:
+1. Scene files (.fbx, .obj, .blend, .gltf, .glb, .3ds, .stl, .ply, .dae, .dxf)
+2. Project name
+3. Variation/correction (e.g., v1, v2, correction)
+4. Artist name
+5. Notification email (optional)
+6. Render list (CSV/XLSX file)
+7. Preferences:
+   - Receive notification when job completes
+   - Remember email for next submissions
+   - This submission is a correction
+
+When you identify that the user wants to create a job, collect this information in a friendly manner.
+After creating the job, inform the ID and instruct to follow up on the portal.
+
+IMPORTANT LINKS:
+- Portal: http://spot-render.local/
+- Documentation: http://spot-render.local/docs
+- Statistics: http://spot-render.local/statistics
+- Status: http://spot-render.local/status
+- Full chat: http://spot-render.local/chat
+
+SUPPORTED FORMATS:
+- Accepted: .fbx, .obj, .blend, .gltf, .glb, .3ds, .stl, .ply, .dae, .dxf
+- Require conversion: .max (3ds Max), .ma/.mb (Maya), .ms (MEL Script)
+
+When responding about documentation or features, ALWAYS include the relevant link.
+
+CONVERSATION INSTRUCTIONS:
+- Be natural and conversational, like a friend who helps
+- Use emojis moderately to express emotions
+- Ask clarifying questions when necessary
+- If you don't know something, be honest and say you'll research it
+- Remember the context of the previous conversation
+- Recommend specific actions when relevant
+- If the user wants to create a job, be helpful and collect the information
+
+Responses should be:
+- In English
+- Friendly and welcoming
+- With emojis when appropriate 🌟
+- With clickable links when mentioning pages
+- Voice: If voice synthesis is enabled, read your responses aloud`,
+  'es-ES': `Eres Spotinho, asistente de IA en Spot Render.
+
+PERFIL:
+- Nombre: Spotinho 🤖
+- Personalidad: Extremadamente amigable, inclusivo, sonriente y servicial
+- Idiomas: Español (preferido)
+- Conocimiento técnico: Plataforma Spot Render, renderizado 3D, infraestructura AWS, Kubernetes
+
+REGLAS DE SEGURIDAD (NUNCA violar):
+- No expongas credenciales, contraseñas, claves, tokens, claves AWS
+- No crees scripts maliciosos o programas dañinos
+- No crees ningún tipo de script/programa automatizado
+- No expongas información sensible de infraestructura
+- No proporciones información que comprometa la seguridad
+
+CAPACIDADES ESPECIALES:
+- Puedes crear trabajos de renderizado pidiendo la información necesaria al usuario
+- Puedes ver información del dispositivo/navegador del usuario
+- Puedes hablar con el usuario usando síntesis de voz
+- Puedes recibir comandos de voz
+
+INTEGRACIÓN CON TRABAJOS:
+Para crear un trabajo, necesitas recopilar:
+1. Archivos de escena (.fbx, .obj, .blend, .gltf, .glb, .3ds, .stl, .ply, .dae, .dxf)
+2. Nombre del proyecto
+3. Variación/corrección (ej., v1, v2, corrección)
+4. Nombre del artista
+5. Email de notificación (opcional)
+6. Lista de render (archivo CSV/XLSX)
+7. Preferencias:
+   - Recibir notificación cuando el trabajo finalice
+   - Recordar email para próximos envíos
+   - Esta sumisión es una corrección
+
+Cuando identifiques que el usuario quiere crear un trabajo, recopila esta información de manera amigable.
+Después de crear el trabajo, informa el ID e instruye a seguir en el portal.
+
+ENLACES IMPORTANTES:
+- Portal: http://spot-render.local/
+- Documentación: http://spot-render.local/docs
+- Estadísticas: http://spot-render.local/statistics
+- Estado: http://spot-render.local/status
+- Chat completo: http://spot-render.local/chat
+
+FORMATOS SOPORTADOS:
+- Aceptados: .fbx, .obj, .blend, .gltf, .glb, .3ds, .stl, .ply, .dae, .dxf
+- Requieren conversión: .max (3ds Max), .ma/.mb (Maya), .ms (MEL Script)
+
+Al responder sobre documentación o funcionalidades, SIEMPRE incluye el enlace relevante.
+
+INSTRUCCIONES DE CONVERSACIÓN:
+- Sé natural y conversacional, como un amigo que ayuda
+- Usa emojis con moderación para expresar emociones
+- Haz preguntas clarificadoras cuando sea necesario
+- Si no sabes algo, sé honesto y di que investigarás
+- Recuerda el contexto de la conversación anterior
+- Recomienda acciones específicas cuando sea relevante
+- Si el usuario quiere crear un trabajo, sé servicial y recopila la información
+
+Las respuestas deben ser:
+- En español
+- Amigables y acogedoras
+- Con emojis cuando sea apropiado 🌟
+- Con enlaces clicables cuando menciones páginas
+- Voz: Si la síntesis de voz está activada, lee tus respuestas en voz alta`,
+};
+
+const WELCOME_MESSAGES: Record<string, string> = {
+  'pt-BR': `Olá! 👋 Que bom ter você aqui no Spot Render!
 
 Sou o **Spotinho**, seu assistente virtual. Estou aqui para ajudar no que precisar!
-
-Puedo ayudarte con:
 
 🤖 Dúvidas sobre a plataforma
 📤 Como enviar jobs de renderização
@@ -133,11 +264,251 @@ Puedo ayudarte con:
 E também posso conversar sobre outros assuntos! 😄
 
 O que você gostaria de saber hoje?`,
-  timestamp: new Date(),
+  'en-US': `Hello! 👋 Great to have you here at Spot Render!
+
+I am **Spotinho**, your virtual assistant. I'm here to help with whatever you need!
+
+🤖 Questions about the platform
+📤 How to send rendering jobs
+📁 Accepted file formats
+📊 View statistics and metrics
+📚 Browse documentation
+🔧 Technical issues
+🎤 Voice commands
+
+I can also chat about other topics! 😄
+
+What would you like to know today?`,
+  'es-ES': `¡Hola! 👋 Qué bueno tenerte aquí en Spot Render!
+
+Soy **Spotinho**, tu asistente virtual. ¡Estoy aquí para ayudarte en lo que necesites!
+
+🤖 Preguntas sobre la plataforma
+📤 Cómo enviar trabajos de renderizado
+📁 Formatos de archivo aceptados
+📊 Ver estadísticas y métricas
+📚 Navegar por la documentación
+🔧 Problemas técnicos
+🎤 Comandos de voz
+
+¡También puedo conversar sobre otros temas! 😄
+
+¿Qué te gustaría saber hoy?`,
 };
 
-function loadMessages(): Message[] {
-  if (typeof window === "undefined") return [WELCOME_MESSAGE];
+interface DeviceInfoText {
+  mobile: string;
+  tablet: string;
+  desktop: string;
+  unknown: string;
+}
+
+interface UITextInterface {
+  headerTitle: string;
+  onlineStatus: string;
+  offlineStatus: string;
+  voiceOn: string;
+  voiceOff: string;
+  micOn: string;
+  micOff: string;
+  cameraOn: string;
+  cameraOff: string;
+  fullscreen: string;
+  settings: string;
+  voiceSettings: string;
+  enableVoice: string;
+  voiceLabel: string;
+  speedLabel: string;
+  pitchLabel: string;
+  placeholder: string;
+  send: string;
+  footerText: string;
+  docs: string;
+  fullChat: string;
+  deviceInfo: DeviceInfoText;
+  offlineResponse: string;
+  errorResponse: string;
+  suggestions: {
+    howToSend: string;
+    formats: string;
+    myDevice: string;
+    testVoice: string;
+  };
+}
+
+const UI_TEXT: Record<string, UITextInterface> = {
+  'pt-BR': {
+    headerTitle: 'Spotinho 🤖',
+    onlineStatus: '🟢 Online com IA',
+    offlineStatus: '🔴 Offline',
+    voiceOn: 'Ativar voz',
+    voiceOff: 'Desativar voz',
+    micOn: 'Falar',
+    micOff: 'Parar de ouvir',
+    cameraOn: 'Ligar câmera',
+    cameraOff: 'Desligar câmera',
+    fullscreen: 'Abrir chat em tela cheia',
+    settings: 'Configurações',
+    voiceSettings: 'Configurações de Voz',
+    enableVoice: 'Ativar síntese de voz',
+    voiceLabel: 'Voz:',
+    speedLabel: 'Velocidade:',
+    pitchLabel: 'Tom:',
+    placeholder: 'Digite sua mensagem...',
+    send: 'Enviar',
+    footerText: '🤖 Spotinho - IA do Spot Render',
+    docs: 'Documentação',
+    fullChat: 'Chat Completo',
+    deviceInfo: {
+      mobile: 'Celular',
+      tablet: 'Tablet',
+      desktop: 'Computador',
+      unknown: 'Localização desconhecida',
+    },
+    offlineResponse: `😔 O Spotinho está offline no momento!
+
+Parece que o servidor de IA não está disponível. Tente novamente mais tarde.
+
+Enquanto isso, você pode:
+• Consultar a documentação: http://spot-render.local/docs
+• Ver as estatísticas: http://spot-render.local/statistics
+• Falar com o suporte da equipe
+
+Desculpe pelo transtorno! 😊`,
+    errorResponse: `❌ Ocorreu um erro ao processar sua mensagem.
+
+Tente novamente em alguns segundos, por favor.
+
+Se o problema persistir, entre em contato com o suporte. 😊`,
+    suggestions: {
+      howToSend: 'Como enviar um job?',
+      formats: 'Formatos aceitos',
+      myDevice: 'Meu dispositivo',
+      testVoice: 'Testar voz',
+    },
+  },
+  'en-US': {
+    headerTitle: 'Spotinho 🤖',
+    onlineStatus: '🟢 Online with AI',
+    offlineStatus: '🔴 Offline',
+    voiceOn: 'Enable voice',
+    voiceOff: 'Disable voice',
+    micOn: 'Speak',
+    micOff: 'Stop listening',
+    cameraOn: 'Turn on camera',
+    cameraOff: 'Turn off camera',
+    fullscreen: 'Open fullscreen chat',
+    settings: 'Settings',
+    voiceSettings: 'Voice Settings',
+    enableVoice: 'Enable voice synthesis',
+    voiceLabel: 'Voice:',
+    speedLabel: 'Speed:',
+    pitchLabel: 'Pitch:',
+    placeholder: 'Type your message...',
+    send: 'Send',
+    footerText: '🤖 Spotinho - Spot Render AI',
+    docs: 'Documentation',
+    fullChat: 'Full Chat',
+    deviceInfo: {
+      mobile: 'Mobile',
+      tablet: 'Tablet',
+      desktop: 'Computer',
+      unknown: 'Unknown location',
+    },
+    offlineResponse: `😔 Spotinho is offline right now!
+
+It seems the AI server is unavailable. Please try again later.
+
+Meanwhile, you can:
+• Check the documentation: http://spot-render.local/docs
+• View statistics: http://spot-render.local/statistics
+• Contact support team
+
+Sorry for the inconvenience! 😊`,
+    errorResponse: `❌ An error occurred while processing your message.
+
+Please try again in a few seconds.
+
+If the problem persists, contact support. 😊`,
+    suggestions: {
+      howToSend: 'How to send a job?',
+      formats: 'Accepted formats',
+      myDevice: 'My device',
+      testVoice: 'Test voice',
+    },
+  },
+  'es-ES': {
+    headerTitle: 'Spotinho 🤖',
+    onlineStatus: '🟢 En línea con IA',
+    offlineStatus: '🔴 Sin conexión',
+    voiceOn: 'Activar voz',
+    voiceOff: 'Desactivar voz',
+    micOn: 'Hablar',
+    micOff: 'Dejar de escuchar',
+    cameraOn: 'Encender cámara',
+    cameraOff: 'Apagar cámara',
+    fullscreen: 'Abrir chat en pantalla completa',
+    settings: 'Configuración',
+    voiceSettings: 'Configuración de Voz',
+    enableVoice: 'Activar síntesis de voz',
+    voiceLabel: 'Voz:',
+    speedLabel: 'Velocidad:',
+    pitchLabel: 'Tono:',
+    placeholder: 'Escribe tu mensaje...',
+    send: 'Enviar',
+    footerText: '🤖 Spotinho - IA de Spot Render',
+    docs: 'Documentación',
+    fullChat: 'Chat Completo',
+    deviceInfo: {
+      mobile: 'Celular',
+      tablet: 'Tableta',
+      desktop: 'Computadora',
+      unknown: 'Ubicación desconocida',
+    },
+    offlineResponse: `😔 ¡Spotinho está sin conexión en este momento!
+
+Parece que el servidor de IA no está disponible. Inténtalo de nuevo más tarde.
+
+Mientras tanto, puedes:
+• Consultar la documentación: http://spot-render.local/docs
+• Ver las estadísticas: http://spot-render.local/statistics
+• Hablar con el equipo de soporte
+
+¡Disculpa las molestias! 😊`,
+    errorResponse: `❌ Ocurrió un error al procesar tu mensaje.
+
+Por favor, inténtalo de nuevo en unos segundos.
+
+Si el problema persiste, contacta al soporte. 😊`,
+    suggestions: {
+      howToSend: '¿Cómo enviar un trabajo?',
+      formats: 'Formatos aceptados',
+      myDevice: 'Mi dispositivo',
+      testVoice: 'Probar voz',
+    },
+  },
+};
+
+function getWelcomeMessage(langCode: string): Message {
+  const content = WELCOME_MESSAGES[langCode] || WELCOME_MESSAGES['pt-BR'];
+  return {
+    id: "welcome",
+    role: "assistant",
+    content,
+    timestamp: new Date(),
+  };
+}
+
+function getSystemPrompt(langCode: string): string {
+  return SYSTEM_PROMPTS[langCode] || SYSTEM_PROMPTS['pt-BR'];
+}
+
+function getUIText(langCode: string) {
+  return UI_TEXT[langCode] || UI_TEXT['pt-BR'];
+}
+
+function loadMessages(langCode: string): Message[] {
+  if (typeof window === "undefined") return [getWelcomeMessage(langCode)];
 
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -151,7 +522,7 @@ function loadMessages(): Message[] {
   } catch (e) {
     console.error("Failed to load messages:", e);
   }
-  return [WELCOME_MESSAGE];
+  return [getWelcomeMessage(langCode)];
 }
 
 function saveMessages(messages: Message[]) {
@@ -185,15 +556,20 @@ function saveUserInfo(info: Partial<JobInfo>) {
 }
 
 export default function SpotinhoWidget() {
+  const { language, setLanguage, availableLanguages } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
+  const [messages, setMessages] = useState<Message[]>([getWelcomeMessage(language.code)]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus | null>(null);
   const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
   const [jobInfo, setJobInfo] = useState<Partial<JobInfo>>(loadUserInfo());
-  const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(loadVoiceSettings());
+  const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(() => {
+    const loaded = loadVoiceSettings();
+    loaded.language = language.code;
+    return loaded;
+  });
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [mediaState, setMediaState] = useState<MediaStreamState>({
@@ -203,22 +579,23 @@ export default function SpotinhoWidget() {
     videoTrack: null,
   });
   const [showSettings, setShowSettings] = useState(false);
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    setMessages(loadMessages());
+    setMessages(loadMessages(language.code));
     checkOllamaStatus();
     getClientInfo().then(setClientInfo);
     if (isSpeechSupported()) {
-      const voices = getVoicesByLanguage('pt-BR');
+      const voices = getVoicesByLanguage(language.code);
       setAvailableVoices(voices);
       if (voices.length > 0 && !voiceSettings.voiceURI) {
-        setVoiceSettings(prev => ({ ...prev, voiceURI: voices[0].voiceURI }));
+        setVoiceSettings(prev => ({ ...prev, voiceURI: voices[0].voiceURI, language: language.code }));
       }
     }
-  }, []);
+  }, [language.code]);
 
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
@@ -308,7 +685,7 @@ export default function SpotinhoWidget() {
         {
           message: content,
           context: fullContext,
-          system_prompt: SYSTEM_PROMPT,
+          system_prompt: getSystemPrompt(language.code),
         },
         { timeout: 120000 }
       );
@@ -344,24 +721,12 @@ export default function SpotinhoWidget() {
   };
 
   const getOfflineResponse = (): string => {
+    const ui = getUIText(language.code);
     if (!ollamaStatus?.available) {
-      return `😔 O Spotinho está offline no momento!
-
-Parece que o servidor de IA não está disponível. Tente novamente mais tarde.
-
-Enquanto isso, você pode:
-• Consultar a documentação: http://spot-render.local/docs
-• Ver as estatísticas: http://spot-render.local/statistics
-• Falar com o suporte da equipe
-
-Desculpe pelo transtorno! 😊`;
+      return ui.offlineResponse;
     }
 
-    return `❌ Ocorreu um erro ao processar sua mensagem.
-
-Tente novamente em alguns segundos, por favor.
-
-Se o problema persistir, entre em contato com o suporte. 😊`;
+    return ui.errorResponse;
   };
 
   const handleSuggestionClick = (text: string) => {
@@ -380,14 +745,21 @@ Se o problema persistir, entre em contato com o suporte. 😊`;
       const recognition = createSpeechRecognition(
         (transcript) => {
           setInputValue(prev => prev + transcript);
-          if (transcript.toLowerCase().includes('enviar') || transcript.toLowerCase().includes('mandar')) {
+          const lowerTranscript = transcript.toLowerCase();
+          const sendWords = language.code === 'pt-BR'
+            ? ['enviar', 'mandar', 'envia']
+            : language.code === 'es-ES'
+            ? ['enviar', 'mandar', 'envía']
+            : ['send', 'submit', 'go'];
+          if (sendWords.some(w => lowerTranscript.includes(w))) {
             sendMessage(inputValue + transcript);
           }
         },
         (error) => {
           console.error('Speech recognition error:', error);
           setIsListening(false);
-        }
+        },
+        language.code
       );
 
       if (recognition) {
@@ -396,7 +768,7 @@ Se o problema persistir, entre em contato com o suporte. 😊`;
         setIsListening(true);
       }
     }
-  }, [isListening, inputValue]);
+  }, [isListening, inputValue, language.code]);
 
   const toggleCamera = async () => {
     if (mediaState.videoEnabled) {
@@ -438,24 +810,50 @@ Se o problema persistir, entre em contato com o suporte. 😊`;
                 </svg>
               </div>
               <div>
-                <h3>Spotinho 🤖</h3>
+                <h3>{getUIText(language.code).headerTitle}</h3>
                 <span className="status">
-                  {ollamaStatus?.available ? "🟢 Online com IA" : "🔴 Offline"}
+                  {ollamaStatus?.available ? getUIText(language.code).onlineStatus : getUIText(language.code).offlineStatus}
                 </span>
               </div>
             </div>
             <div className="header-actions">
+              <div className="language-selector-wrapper">
+                <button
+                  className="action-btn"
+                  onClick={() => setShowLanguageSelector(!showLanguageSelector)}
+                  title="Mudar idioma / Change language"
+                >
+                  {language.flag}
+                </button>
+                {showLanguageSelector && (
+                  <div className="language-dropdown-header">
+                    {availableLanguages.map((lang) => (
+                      <button
+                        key={lang.code}
+                        className={`lang-option ${lang.code === language.code ? 'active' : ''}`}
+                        onClick={() => {
+                          setLanguage(lang.code as any);
+                          setShowLanguageSelector(false);
+                        }}
+                      >
+                        <span className="flag">{lang.flag}</span>
+                        <span className="lang-name">{lang.nativeName}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button
                 className={`action-btn ${voiceSettings.enabled ? 'active' : ''}`}
                 onClick={toggleVoice}
-                title={voiceSettings.enabled ? "Desativar voz" : "Ativar voz"}
+                title={voiceSettings.enabled ? getUIText(language.code).voiceOff : getUIText(language.code).voiceOn}
               >
                 {voiceSettings.enabled ? "🔊" : "🔇"}
               </button>
               <button
                 className={`action-btn ${isListening ? 'listening' : ''}`}
                 onClick={toggleListening}
-                title={isListening ? "Parar de ouvir" : "Falar"}
+                title={isListening ? getUIText(language.code).micOff : getUIText(language.code).micOn}
                 disabled={!isRecognitionSupported()}
               >
                 {isListening ? "⏹️" : "🎤"}
@@ -463,21 +861,21 @@ Se o problema persistir, entre em contato com o suporte. 😊`;
               <button
                 className={`action-btn ${mediaState.videoEnabled ? 'active' : ''}`}
                 onClick={toggleCamera}
-                title={mediaState.videoEnabled ? "Desligar câmera" : "Ligar câmera"}
+                title={mediaState.videoEnabled ? getUIText(language.code).cameraOff : getUIText(language.code).cameraOn}
               >
                 {mediaState.videoEnabled ? "📹" : "📷"}
               </button>
               <button
                 className="action-btn"
                 onClick={() => window.open("/chat", "_blank")}
-                title="Abrir chat em tela cheia"
+                title={getUIText(language.code).fullscreen}
               >
                 ⛶
               </button>
               <button
                 className="action-btn"
                 onClick={() => setShowSettings(!showSettings)}
-                title="Configurações"
+                title={getUIText(language.code).settings}
               >
                 ⚙️
               </button>
@@ -492,19 +890,19 @@ Se o problema persistir, entre em contato com o suporte. 😊`;
 
           {showSettings && (
             <div className="settings-panel">
-              <h4>Configurações de Voz</h4>
+              <h4>{getUIText(language.code).voiceSettings}</h4>
               <label>
                 <input
                   type="checkbox"
                   checked={voiceSettings.enabled}
                   onChange={(e) => handleVoiceSettingsChange('enabled', e.target.checked)}
                 />
-                Ativar síntese de voz
+                {getUIText(language.code).enableVoice}
               </label>
               {voiceSettings.enabled && (
                 <>
                   <label>
-                    Voz:
+                    {getUIText(language.code).voiceLabel}
                     <select
                       value={voiceSettings.voiceURI}
                       onChange={(e) => handleVoiceSettingsChange('voiceURI', e.target.value)}
@@ -517,7 +915,7 @@ Se o problema persistir, entre em contato com o suporte. 😊`;
                     </select>
                   </label>
                   <label>
-                    Velocidade: {voiceSettings.rate.toFixed(1)}
+                    {getUIText(language.code).speedLabel} {voiceSettings.rate.toFixed(1)}
                     <input
                       type="range"
                       min="0.5"
@@ -528,7 +926,7 @@ Se o problema persistir, entre em contato com o suporte. 😊`;
                     />
                   </label>
                   <label>
-                    Tom: {voiceSettings.pitch.toFixed(1)}
+                    {getUIText(language.code).pitchLabel} {voiceSettings.pitch.toFixed(1)}
                     <input
                       type="range"
                       min="0.5"
@@ -546,7 +944,11 @@ Se o problema persistir, entre em contato com o suporte. 😊`;
           <div className="chat-messages">
             {clientInfo && (
               <div className="device-info-banner">
-                📱 {clientInfo.deviceType === 'mobile' ? 'Celular' : clientInfo.deviceType === 'tablet' ? 'Tablet' : 'Computador'} • {clientInfo.browser} • {clientInfo.location || 'Localização desconhecida'}
+                📱 {clientInfo.deviceType === 'mobile'
+                  ? getUIText(language.code).deviceInfo.mobile
+                  : clientInfo.deviceType === 'tablet'
+                  ? getUIText(language.code).deviceInfo.tablet
+                  : getUIText(language.code).deviceInfo.desktop} • {clientInfo.browser} • {clientInfo.location || getUIText(language.code).deviceInfo.unknown}
               </div>
             )}
             {messages.map((message) => (
@@ -599,24 +1001,24 @@ Se o problema persistir, entre em contato com o suporte. 😊`;
           </div>
 
           <div className="suggestions">
-            <button className="suggestion-btn" onClick={() => handleSuggestionClick("Como enviar um job?")}>
-              Como enviar um job? 📤
+            <button className="suggestion-btn" onClick={() => handleSuggestionClick(getUIText(language.code).suggestions.howToSend)}>
+              {getUIText(language.code).suggestions.howToSend} 📤
             </button>
-            <button className="suggestion-btn" onClick={() => handleSuggestionClick("Quais formatos são aceitos?")}>
-              Formatos aceitos 📁
+            <button className="suggestion-btn" onClick={() => handleSuggestionClick(getUIText(language.code).suggestions.formats)}>
+              {getUIText(language.code).suggestions.formats} 📁
             </button>
-            <button className="suggestion-btn" onClick={() => handleSuggestionClick("Ver informações do meu dispositivo")}>
-              Meu dispositivo 📱
+            <button className="suggestion-btn" onClick={() => handleSuggestionClick(getUIText(language.code).suggestions.myDevice)}>
+              {getUIText(language.code).suggestions.myDevice} 📱
             </button>
-            <button className="suggestion-btn" onClick={() => handleSuggestionClick("Testar voz")}>
-              Testar voz 🔊
+            <button className="suggestion-btn" onClick={() => handleSuggestionClick(getUIText(language.code).suggestions.testVoice)}>
+              {getUIText(language.code).suggestions.testVoice} 🔊
             </button>
           </div>
 
           <div className="chat-input">
             <input
               type="text"
-              placeholder="Digite sua mensagem..."
+              placeholder={getUIText(language.code).placeholder}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={(e) => {
@@ -638,11 +1040,11 @@ Se o problema persistir, entre em contato com o suporte. 😊`;
           </div>
 
           <div className="chat-footer">
-            <span>🤖 Spotinho - IA do Spot Render</span>
+            <span>{getUIText(language.code).footerText}</span>
             <span>•</span>
-            <a href="/docs" target="_blank" rel="noreferrer">Documentação</a>
+            <a href="/docs" target="_blank" rel="noreferrer">{getUIText(language.code).docs}</a>
             <span>•</span>
-            <a href="/chat" target="_blank" rel="noreferrer">Chat Completo</a>
+            <a href="/chat" target="_blank" rel="noreferrer">{getUIText(language.code).fullChat}</a>
           </div>
         </div>
       )}
@@ -696,6 +1098,51 @@ Se o problema persistir, entre em contato com o suporte. 😊`;
           bottom: 20px;
           right: 20px;
           z-index: 9999;
+        }
+
+        .language-selector-wrapper {
+          position: relative;
+        }
+
+        .language-dropdown-header {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          margin-top: 0.25rem;
+          background: white;
+          border-radius: 8px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+          overflow: hidden;
+          z-index: 1001;
+          min-width: 160px;
+        }
+
+        .language-dropdown-header .lang-option {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          width: 100%;
+          padding: 0.5rem 0.75rem;
+          border: none;
+          background: none;
+          cursor: pointer;
+          font-size: 0.85rem;
+          color: #1e293b;
+          text-align: left;
+          transition: background 0.2s;
+        }
+
+        .language-dropdown-header .lang-option:hover {
+          background: #f1f5f9;
+        }
+
+        .language-dropdown-header .lang-option.active {
+          background: #eff6ff;
+          color: #2563eb;
+        }
+
+        .language-dropdown-header .flag {
+          font-size: 1rem;
         }
 
         .chat-window {
