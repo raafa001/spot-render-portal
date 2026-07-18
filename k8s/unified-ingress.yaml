@@ -4,12 +4,11 @@ metadata:
   name: spot-render-unified
   namespace: spot-render
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
   ingressClassName: nginx
   rules:
-  - host: spot-render.local
-    http:
+  - http:
       paths:
       - path: /
         pathType: Prefix
@@ -29,6 +28,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: ai-agent
+            name: spot-render-backend-stable
             port:
-              number: 8080
+              number: 80
