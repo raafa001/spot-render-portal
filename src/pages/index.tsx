@@ -100,6 +100,9 @@ export default function Home() {
                   <Link href="/statistics" className="quick-action">
                     📊 Estatísticas
                   </Link>
+                  <a href="/chat" className="quick-action spotinho-action">
+                    🤖 Falar com Spotinho
+                  </a>
                 </div>
               </div>
             </div>
@@ -318,6 +321,15 @@ export default function Home() {
 
         .quick-action:hover {
           background: #dbeafe;
+        }
+
+        .quick-action.spotinho-action {
+          background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+          color: white;
+        }
+
+        .quick-action.spotinho-action:hover {
+          background: linear-gradient(135deg, #6d28d9 0%, #1d4ed8 100%);
         }
 
         .content {

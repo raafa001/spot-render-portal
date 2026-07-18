@@ -121,6 +121,25 @@ export default function SpotinhoWidget() {
     checkOllamaStatus();
   }, []);
 
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setMessages(parsed.map((m: Message) => ({
+            ...m,
+            timestamp: new Date(m.timestamp),
+          })));
+        } catch (err) {
+          console.error("Failed to parse messages from storage:", err);
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
   const checkOllamaStatus = async () => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_AI_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://api.spot-render.local";
@@ -256,17 +275,17 @@ Se o problema persistir, entre em contato com o suporte. 😊`;
             <div className="header-actions">
               <button
                 className="action-btn"
+                onClick={() => window.open("/chat", "_blank")}
+                title="Abrir chat em tela cheia"
+              >
+                ⛶
+              </button>
+              <button
+                className="action-btn"
                 onClick={() => setIsExpanded(!isExpanded)}
                 title={isExpanded ? "Minimizar" : "Expandir"}
               >
                 {isExpanded ? "➖" : "➕"}
-              </button>
-              <button
-                className="action-btn"
-                onClick={() => window.open("/chat", "_blank")}
-                title="Abrir em nova aba"
-              >
-                🔗
               </button>
               <button className="close-btn" onClick={() => setIsOpen(false)}>
                 ✕
