@@ -29,7 +29,7 @@ import {
   LanguageConfig,
   detectLanguageFromBrowser,
 } from "../utils/voiceUtils";
-import { LanguageSelector, useLanguage } from "../components/LanguageSelector";
+import { LanguageSelector } from "../components/LanguageSelector";
 
 interface Message {
   id: string;
@@ -616,10 +616,7 @@ export default function ChatPage() {
             </div>
           </div>
           <div className="header-right">
-            <LanguageSelector
-              currentLanguage={langConfig}
-              onLanguageChange={handleLanguageChange}
-            />
+            <LanguageSelector />
             <button
               className={`icon-btn ${voiceSettings.enabled ? 'active' : ''}`}
               onClick={toggleVoice}

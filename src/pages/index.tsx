@@ -5,7 +5,7 @@ import axios from "axios";
 import UploadForm from "../components/UploadForm";
 import JobsTable from "../components/JobsTable";
 import SpotinhoWidget from "../components/SpotinhoWidget";
-import { LanguageSelector, useLanguage } from "../components/LanguageSelector";
+import { LanguageSelector } from "../components/LanguageSelector";
 
 interface QuickStats {
   total: number;
@@ -15,7 +15,6 @@ interface QuickStats {
 
 export default function Home() {
   const [stats, setStats] = useState<QuickStats>({ total: 0, running: 0, completed: 0 });
-  const { language, setLanguage } = useLanguage();
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -52,11 +51,7 @@ export default function Home() {
                 TechDocs
               </Link>
               <button onClick={() => document.getElementById("upload-card")?.scrollIntoView({ behavior: "smooth" })}>Enviar job</button>
-              <LanguageSelector
-                currentLanguage={language}
-                onLanguageChange={setLanguage}
-                compact
-              />
+              <LanguageSelector compact />
             </div>
           </div>
 

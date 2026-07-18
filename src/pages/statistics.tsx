@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import Head from "next/head";
+import Link from "next/link";
 import axios from "axios";
 import SpotinhoWidget from "../components/SpotinhoWidget";
+import { LanguageSelector } from "../components/LanguageSelector";
 
 interface JobStatistics {
   total_jobs: number;
@@ -146,6 +148,17 @@ export default function StatisticsPage() {
       </Head>
       <div className="page">
         <header className="header">
+          <nav className="nav">
+            <div className="brand">Spot Render</div>
+            <div className="nav__links">
+              <Link href="/">Upload</Link>
+              <Link href="/statistics">Estatísticas</Link>
+              <Link href="/docs">TechDocs</Link>
+              <a href="https://github.com/raafa001/spot-render" target="_blank" rel="noreferrer">Repositórios</a>
+              <Link href="/chat">Spotinho</Link>
+              <LanguageSelector compact />
+            </div>
+          </nav>
           <h1>Estatísticas de Renderização</h1>
           <p>Acompanhe o desempenho e成功率 dos jobs de renderização</p>
         </header>

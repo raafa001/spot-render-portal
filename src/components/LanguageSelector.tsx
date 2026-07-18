@@ -1,30 +1,29 @@
-import { useState, useEffect } from "react";
+import { createContext, useState, useEffect, useContext, ReactNode } from "react";
 import {
   SUPPORTED_LANGUAGES,
   LanguageConfig,
   getLanguageByCode,
   detectLanguageFromBrowser,
   detectLanguageFromGeolocation,
-  VoiceSettings,
-  loadVoiceSettings,
-  saveVoiceSettings,
 } from "../utils/voiceUtils";
 
-const LANGUAGE_STORAGE_KEY = "spotrender_language";
 const USER_LANGUAGE_KEY = "spotrender_user_language";
 
 export interface LanguageContextType {
   language: LanguageConfig;
-  setLanguage: (lang: LanguageCode) => void;
+  setLanguage: (code: LanguageCode) => void;
   availableLanguages: LanguageConfig[];
   isAutoDetected: boolean;
 }
 
 export type LanguageCode = 'pt-BR' | 'en-US' | 'es-ES';
 
-export function useLanguage() {
+const LanguageContext = createContext<LanguageContextType | null>(null);
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<LanguageConfig>(SUPPORTED_LANGUAGES[0]);
   const [isAutoDetected, setIsAutoDetected] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     async function initLanguage() {
@@ -32,6 +31,7 @@ export function useLanguage() {
       if (savedLanguage && SUPPORTED_LANGUAGES.find(l => l.code === savedLanguage)) {
         setLanguageState(getLanguageByCode(savedLanguage));
         setIsAutoDetected(false);
+        setInitialized(true);
         return;
       }
 
@@ -39,6 +39,7 @@ export function useLanguage() {
       const langConfig = getLanguageByCode(geoLanguage);
       setLanguageState(langConfig);
       setIsAutoDetected(true);
+      setInitialized(true);
     }
 
     initLanguage();
@@ -51,27 +52,43 @@ export function useLanguage() {
     localStorage.setItem(USER_LANGUAGE_KEY, code);
   };
 
-  return {
-    language,
-    setLanguage,
-    availableLanguages: SUPPORTED_LANGUAGES,
-    isAutoDetected,
-  };
+  if (!initialized) {
+    return null;
+  }
+
+  return (
+    <LanguageContext.Provider
+      value={{
+        language,
+        setLanguage,
+        availableLanguages: SUPPORTED_LANGUAGES,
+        isAutoDetected,
+      }}
+    >
+      {children}
+    </LanguageContext.Provider>
+  );
+}
+
+export function useLanguage(): LanguageContextType {
+  const context = useContext(LanguageContext);
+  if (!context) {
+    return {
+      language: SUPPORTED_LANGUAGES[0],
+      setLanguage: () => {},
+      availableLanguages: SUPPORTED_LANGUAGES,
+      isAutoDetected: false,
+    };
+  }
+  return context;
 }
 
 interface LanguageSelectorProps {
-  currentLanguage: LanguageConfig;
-  onLanguageChange: (code: LanguageCode) => void;
-  languages?: LanguageConfig[];
   compact?: boolean;
 }
 
-export function LanguageSelector({
-  currentLanguage,
-  onLanguageChange,
-  languages = SUPPORTED_LANGUAGES,
-  compact = false,
-}: LanguageSelectorProps) {
+export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
+  const { language, setLanguage, availableLanguages } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -81,25 +98,25 @@ export function LanguageSelector({
         onClick={() => setIsOpen(!isOpen)}
         title="Selecionar idioma / Select language"
       >
-        <span className="flag">{currentLanguage.flag}</span>
-        {!compact && <span className="lang-name">{currentLanguage.nativeName}</span>}
+        <span className="flag">{language.flag}</span>
+        {!compact && <span className="lang-name">{language.nativeName}</span>}
         <span className="arrow">{isOpen ? '▲' : '▼'}</span>
       </button>
 
       {isOpen && (
         <div className="language-dropdown">
-          {languages.map((lang) => (
+          {availableLanguages.map((lang) => (
             <button
               key={lang.code}
-              className={`lang-option ${lang.code === currentLanguage.code ? 'active' : ''}`}
+              className={`lang-option ${lang.code === language.code ? 'active' : ''}`}
               onClick={() => {
-                onLanguageChange(lang.code as LanguageCode);
+                setLanguage(lang.code as LanguageCode);
                 setIsOpen(false);
               }}
             >
               <span className="flag">{lang.flag}</span>
               <span className="lang-name">{lang.nativeName}</span>
-              {lang.code === currentLanguage.code && <span className="check">✓</span>}
+              {lang.code === language.code && <span className="check">✓</span>}
             </button>
           ))}
         </div>

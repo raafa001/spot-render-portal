@@ -2,6 +2,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { useState } from "react";
 import SpotinhoWidget from "./SpotinhoWidget";
+import { LanguageSelector } from "./LanguageSelector";
 
 interface DocLayoutProps {
   title: string;
@@ -29,8 +30,13 @@ export default function DocLayout({ title, description, children, sections }: Do
       <div className="doc-page">
         <header className="doc-header">
           <div className="doc-header-content">
-            <Link href="/" className="back-link">← Voltar ao Portal</Link>
-            <Link href="/docs" className="docs-link">📚 TechDocs</Link>
+            <div className="doc-header-top">
+              <div className="doc-header-links">
+                <Link href="/" className="back-link">← Voltar ao Portal</Link>
+                <Link href="/docs" className="docs-link">📚 TechDocs</Link>
+              </div>
+              <LanguageSelector compact />
+            </div>
             <h1>{title}</h1>
             {description && <p className="doc-description">{description}</p>}
           </div>
@@ -106,6 +112,18 @@ export default function DocLayout({ title, description, children, sections }: Do
         .doc-header-content {
           max-width: 1200px;
           margin: 0 auto;
+        }
+
+        .doc-header-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1rem;
+        }
+
+        .doc-header-links {
+          display: flex;
+          gap: 0.5rem;
         }
 
         .back-link, .docs-link {

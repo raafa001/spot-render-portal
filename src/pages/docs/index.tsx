@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import SpotinhoWidget from "../../components/SpotinhoWidget";
+import { LanguageSelector } from "../../components/LanguageSelector";
 
 interface DocSection {
   id: string;
@@ -318,7 +319,10 @@ Se não encontrar nada relevante, responda: [NONE]`,
       <div className="page">
         <header className="header">
           <div className="header-content">
-            <Link href="/" className="back-link">← Voltar ao Portal</Link>
+            <div className="header-top">
+              <Link href="/" className="back-link">← Voltar ao Portal</Link>
+              <LanguageSelector compact />
+            </div>
             <h1>📚 TechDocs</h1>
             <p className="subtitle">Documentação completa do Spot Render</p>
           </div>

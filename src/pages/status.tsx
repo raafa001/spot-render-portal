@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Head from "next/head";
+import Link from "next/link";
 import SpotinhoWidget from "../components/SpotinhoWidget";
+import { LanguageSelector } from "../components/LanguageSelector";
 
 interface HealthComponent {
   name: string;
@@ -29,6 +31,17 @@ export default function Status() {
         <title>Status da Plataforma</title>
       </Head>
       <main className="container">
+        <nav className="nav">
+          <div className="brand">Spot Render</div>
+          <div className="nav__links">
+            <Link href="/">Upload</Link>
+            <Link href="/statistics">Estatísticas</Link>
+            <Link href="/docs">TechDocs</Link>
+            <a href="https://github.com/raafa001/spot-render" target="_blank" rel="noreferrer">Repositórios</a>
+            <Link href="/chat">Spotinho</Link>
+            <LanguageSelector compact />
+          </div>
+        </nav>
         <h1>Status dos Componentes</h1>
         {!health && <p>Carregando...</p>}
         {health && (
