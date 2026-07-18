@@ -17,14 +17,19 @@ import {
   speak,
   stopSpeaking,
   isSpeechSupported,
-  requestMicrophone,
   requestCamera,
   stopTrack,
   createSpeechRecognition,
   getAvailableVoices,
-  getPortugueseVoices,
+  getVoicesByLanguage,
+  getMasculineVoices,
+  getBestVoiceForLanguage,
   isRecognitionSupported,
+  SUPPORTED_LANGUAGES,
+  LanguageConfig,
+  detectLanguageFromBrowser,
 } from "../utils/voiceUtils";
+import { LanguageSelector, useLanguage } from "../components/LanguageSelector";
 
 interface Message {
   id: string;
@@ -42,12 +47,13 @@ interface OllamaStatus {
 const STORAGE_KEY = "spotinho_messages";
 const USER_CONTEXT_KEY = "spotinho_user_context";
 
-const SYSTEM_PROMPT = `Você é o Spotinho, assistente de IA do Spot Render.
+const SYSTEM_PROMPTS: Record<string, string> = {
+  'pt-BR': `Você é o Spotinho, assistente de IA do Spot Render.
 
 PERFIL:
 - Nome: Spotinho 🤖
 - Personalidade: Extremamente amigável, inclusivo, sorridente e prestativo
-- Idiomas: Português brasileiro (preferencial), inglês
+- Idiomas: Português brasileiro (preferencial)
 - Conhecimento técnico: Plataforma Spot Render, renderização 3D, infraestrutura AWS, Kubernetes
 
 REGRAS DE SEGURANÇA (NUNCA viole):
@@ -76,11 +82,6 @@ Para criar um job, você precisa ajudar o usuário a coletar:
    - Lembrar email para próximos envios
    - Esta submissão é uma correção
 
-Após ajudar a coletar todas as informações, instrua o usuário a usar o formulário de upload em http://spot-render.local/
-
-INFORMAÇÕES DO DISPOSITIVO:
-O sistema já conhece as informações do dispositivo do usuário. Use isso para personalizar a experiência.
-
 LINKS IMPORTANTES:
 - Portal: http://spot-render.local/
 - Upload de jobs: http://spot-render.local/
@@ -91,28 +92,110 @@ FORMATOS SUPORTADOS:
 - Aceitos: .fbx, .obj, .blend, .gltf, .glb, .3ds, .stl, .ply, .dae, .dxf
 - Requerem conversão: .max (3ds Max), .ma/.mb (Maya), .ms (MEL Script)
 
-Ao responder sobre documentação ou funcionalidades, SEMPRE inclua o link relevante.
-
 INSTRUÇÕES DE CONVERSA:
-- Seja natural e conversacional, como um amigo que ajuda
-- Use emojis com moderação para expressar emoções
-- Faça perguntas clarifying quando necessário
-- Se não souber algo, seja honesto e diga que vai pesquisar
-- Lembre-se do contexto da conversa anterior
-- Recomende ações específicas quando relevante
-- Se o usuário quiser criar um job, ajude a coletar as informações
+- Seja natural e conversacional
+- Use emojis com moderação
+- Seja prestativo e amigável`,
+  'en-US': `You are Spotinho, AI assistant at Spot Render.
 
-Respostas devem ser:
-- Em português brasileiro
-- Amigáveis e acolhedoras
-- Com emojis quando apropriado 🌟
-- Com links clicáveis quando mencionar páginas
-- Voz: Se a síntese de voz estiver ativada, leia suas respostas em voz alta`;
+PROFILE:
+- Name: Spotinho 🤖
+- Personality: Extremely friendly, inclusive, smiling and helpful
+- Languages: English (preferred)
+- Technical knowledge: Spot Render platform, 3D rendering, AWS infrastructure, Kubernetes
 
-const WELCOME_MESSAGE: Message = {
-  id: "welcome",
-  role: "assistant",
-  content: `Olá! 👋 Que bom ter você aqui no Spot Render!
+SAFETY RULES (NEVER violate):
+- Do not expose credentials, passwords, keys, tokens, AWS keys
+- Do not create malicious scripts or harmful programs
+- Do not create any type of automated script
+- Do not expose sensitive infrastructure information
+- Do not provide information that compromises security
+
+SPECIAL CAPABILITIES:
+- You can help create rendering jobs
+- You can speak with the user using voice synthesis
+- You can receive voice commands
+- You know the user's device information
+
+JOB INTEGRATION:
+To create a job, you need to help the user collect:
+1. Scene files (.fbx, .obj, .blend, .gltf, .glb, .3ds, .stl, .ply, .dae, .dxf)
+2. Project name
+3. Variation/correction (e.g., v1, v2, correction)
+4. Artist name
+5. Notification email (optional)
+6. Render list (CSV/XLSX file - required)
+7. Preferences:
+   - Receive notification when job completes
+   - Remember email for next submissions
+   - This submission is a correction
+
+IMPORTANT LINKS:
+- Portal: http://spot-render.local/
+- Job upload: http://spot-render.local/
+- Documentation: http://spot-render.local/docs
+- Statistics: http://spot-render.local/statistics
+
+SUPPORTED FORMATS:
+- Accepted: .fbx, .obj, .blend, .gltf, .glb, .3ds, .stl, .ply, .dae, .dxf
+- Require conversion: .max (3ds Max), .ma/.mb (Maya), .ms (MEL Script)
+
+CONVERSATION INSTRUCTIONS:
+- Be natural and conversational
+- Use emojis moderately
+- Be helpful and friendly`,
+  'es-ES': `Eres Spotinho, asistente de IA en Spot Render.
+
+PERFIL:
+- Nombre: Spotinho 🤖
+- Personalidad: Extremadamente amigable, inclusivo, sonriente y servicial
+- Idiomas: Español (preferido)
+- Conocimiento técnico: Plataforma Spot Render, renderizado 3D, infraestructura AWS, Kubernetes
+
+REGLAS DE SEGURIDAD (NUNCA violar):
+- No expongas credenciales, contraseñas, claves, tokens, claves AWS
+- No crees scripts maliciosos o programas dañinos
+- No crees ningún tipo de script automatizado
+- No expongas información sensible de infraestructura
+- No proporciones información que comprometa la seguridad
+
+CAPACIDADES ESPECIALES:
+- Puedes ayudar a crear trabajos de renderizado
+- Puedes hablar con el usuario usando síntesis de voz
+- Puedes recibir comandos de voz
+- Conoces la información del dispositivo del usuario
+
+INTEGRACIÓN CON TRABAJOS:
+Para crear un trabajo, necesitas ayudar al usuario a recopilar:
+1. Archivos de escena (.fbx, .obj, .blend, .gltf, .glb, .3ds, .stl, .ply, .dae, .dxf)
+2. Nombre del proyecto
+3. Variación/corrección (ej., v1, v2, corrección)
+4. Nombre del artista
+5. Email de notificación (opcional)
+6. Lista de render (archivo CSV/XLSX - obligatorio)
+7. Preferencias:
+   - Recibir notificación cuando el trabajo finalice
+   - Recordar email para próximos envíos
+   - Esta sumisión es una corrección
+
+ENLACES IMPORTANTES:
+- Portal: http://spot-render.local/
+- Subir trabajos: http://spot-render.local/
+- Documentación: http://spot-render.local/docs
+- Estadísticas: http://spot-render.local/statistics
+
+FORMATOS SOPORTADOS:
+- Aceptados: .fbx, .obj, .blend, .gltf, .glb, .3ds, .stl, .ply, .dae, .dxf
+- Requieren conversión: .max (3ds Max), .ma/.mb (Maya), .ms (MEL Script)
+
+INSTRUCCIONES DE CONVERSACIÓN:
+- Sé natural y conversacional
+- Usa emojis con moderación
+- Sé servicial y amigable`,
+};
+
+const WELCOME_MESSAGES: Record<string, string> = {
+  'pt-BR': `Olá! 👋 Que bom ter você aqui no Spot Render!
 
 Sou o **Spotinho**, seu assistente virtual. Estou aqui para ajudar no que precisar!
 
@@ -132,7 +215,46 @@ Sou o **Spotinho**, seu assistente virtual. Estou aqui para ajudar no que precis
 📱 Também sei informações sobre seu dispositivo para melhor ajudá-lo!
 
 O que você gostaria de saber hoje? 😊`,
-  timestamp: new Date(),
+  'en-US': `Hello! 👋 Great to have you here at Spot Render!
+
+I am **Spotinho**, your virtual assistant. I'm here to help with whatever you need!
+
+🤖 I can help with:
+• Questions about the platform
+• How to send rendering jobs
+• Supported file formats
+• Statistics and metrics
+• Browse documentation
+• Technical problems
+
+🎤 **New features:**
+• Voice command - click the microphone to speak
+• Spoken responses - activate the speaker to hear my answers
+• Video - click the camera to turn on/off
+
+📱 I also know information about your device to better help you!
+
+What would you like to know today? 😊`,
+  'es-ES': `¡Hola! 👋 Qué bueno tenerte aquí en Spot Render!
+
+Soy **Spotinho**, tu asistente virtual. ¡Estoy aquí para ayudarte en lo que necesites!
+
+🤖 Puedo ayudar con:
+• Preguntas sobre la plataforma
+• Cómo enviar trabajos de renderizado
+• Formatos de archivo soportados
+• Estadísticas y métricas
+• Navegar la documentación
+• Problemas técnicos
+
+🎤 **Nuevas funciones:**
+• Comando de voz - haz clic en el micrófono para hablar
+• Respuestas habladas - activa el altavoz para escuchar mis respuestas
+• Video - haz clic en la cámara para encender/apagar
+
+📱 También conozco información sobre tu dispositivo para ayudarte mejor!
+
+¿Sobre qué te gustaría saber hoy? 😊`,
 };
 
 interface UserContext {
@@ -145,8 +267,8 @@ interface UserContext {
   isCorrection?: boolean;
 }
 
-function loadMessages(): Message[] {
-  if (typeof window === "undefined") return [WELCOME_MESSAGE];
+function loadMessages(language: string): Message[] {
+  if (typeof window === "undefined") return [];
 
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -160,7 +282,7 @@ function loadMessages(): Message[] {
   } catch (e) {
     console.error("Failed to load messages:", e);
   }
-  return [WELCOME_MESSAGE];
+  return [];
 }
 
 function saveMessages(messages: Message[]) {
@@ -194,7 +316,7 @@ function saveUserContext(ctx: UserContext) {
 }
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus | null>(null);
@@ -203,42 +325,63 @@ export default function ChatPage() {
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(loadVoiceSettings());
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [isListening, setIsListening] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   const [showDeviceInfo, setShowDeviceInfo] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState<string>(detectLanguageFromBrowser());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
-  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+
+  const langConfig = SUPPORTED_LANGUAGES.find(l => l.code === currentLanguage) || SUPPORTED_LANGUAGES[0];
+  const systemPrompt = SYSTEM_PROMPTS[currentLanguage] || SYSTEM_PROMPTS['pt-BR'];
+  const welcomeMessage = WELCOME_MESSAGES[currentLanguage] || WELCOME_MESSAGES['pt-BR'];
 
   useEffect(() => {
-    setMessages(loadMessages());
-    checkOllamaStatus();
-    getClientInfo().then(info => {
+    async function init() {
+      const info = await getClientInfo();
       setClientInfo(info);
-      if (info) {
-        setMessages(prev => {
-          const deviceMsg: Message = {
-            id: `device-${Date.now()}`,
-            role: "assistant",
-            content: `📱 **Informações do seu dispositivo:**\n\n${formatClientInfo(info)}\n\n---\n\nPosso ajudá-lo melhor sabendo estas informações! Como posso te ajudar hoje? 😊`,
-            timestamp: new Date(),
-          };
-          return [...prev, deviceMsg];
-        });
-      }
-    });
 
+      if (voiceSettings.language) {
+        setCurrentLanguage(voiceSettings.language);
+      } else {
+        const detectedLang = info.language || detectLanguageFromBrowser();
+        setCurrentLanguage(detectedLang);
+        setVoiceSettings(prev => ({ ...prev, language: detectedLang }));
+      }
+
+      const welcome: Message = {
+        id: "welcome",
+        role: "assistant",
+        content: welcomeMessage,
+        timestamp: new Date(),
+      };
+      setMessages([welcome]);
+
+      const deviceInfoMsg: Message = {
+        id: `device-${Date.now()}`,
+        role: "assistant",
+        content: `📱 **Device Information:**\n\n${formatClientInfo(info)}\n\n---\n\nI can help you better knowing this information! How can I help you today? 😊`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, deviceInfoMsg]);
+    }
+
+    init();
+    checkOllamaStatus();
+  }, []);
+
+  useEffect(() => {
     if (isSpeechSupported()) {
-      const voices = getPortugueseVoices();
+      const voices = getAvailableVoices();
       setAvailableVoices(voices);
-      if (voices.length > 0 && !voiceSettings.voiceURI) {
-        setVoiceSettings(prev => ({ ...prev, voiceURI: voices[0].voiceURI }));
+
+      if (!voiceSettings.voiceURI) {
+        const bestVoice = getBestVoiceForLanguage(currentLanguage);
+        if (bestVoice) {
+          setVoiceSettings(prev => ({ ...prev, voiceURI: bestVoice.voiceURI }));
+        }
       }
     }
-  }, []);
+  }, [currentLanguage]);
 
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
@@ -312,20 +455,26 @@ export default function ChatPage() {
         .map((m) => `${m.role}: ${m.content}`)
         .join("\n");
 
-      const deviceContext = clientInfo ? `\n\nINFORMAÇÕES DO DISPOSITIVO DO USUÁRIO:\n${formatClientInfo(clientInfo)}` : '';
+      const deviceContext = clientInfo ? `\n\nUSER DEVICE INFORMATION:\n${formatClientInfo(clientInfo)}` : '';
 
       const userCtxStr = userContext.artist
-        ? `\n\nCONTEXTO DO USUÁRIO (lembre-se destas informações):\nNome: ${userContext.artist}\nEmail: ${userContext.email || 'não informado'}\nProjeto padrão: ${userContext.project || 'demo'}\nVariação padrão: ${userContext.variation || 'v1'}`
+        ? `\n\nUSER CONTEXT (remember this information):\nName: ${userContext.artist}\nEmail: ${userContext.email || 'not provided'}\nDefault project: ${userContext.project || 'demo'}\nDefault variation: ${userContext.variation || 'v1'}`
         : '';
 
-      const fullContext = conversationContext + deviceContext + userCtxStr;
+      const langInstruction = currentLanguage === 'en-US'
+        ? '\n\nIMPORTANT: Respond in English.'
+        : currentLanguage === 'es-ES'
+        ? '\n\nIMPORTANT: Respond in Spanish.'
+        : '\n\nIMPORTANT: Respond in Brazilian Portuguese.';
+
+      const fullContext = conversationContext + deviceContext + userCtxStr + langInstruction;
 
       const response = await axios.post(
         `${apiUrl}/ai/chat`,
         {
           message: content,
           context: fullContext,
-          system_prompt: SYSTEM_PROMPT,
+          system_prompt: systemPrompt,
         },
         { timeout: 120000 }
       );
@@ -348,11 +497,11 @@ export default function ChatPage() {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: `❌ Ocorreu um erro ao processar sua mensagem.
-
-Tente novamente em alguns segundos.
-
-Se o problema persistir, entre em contato com o suporte. 😊`,
+        content: currentLanguage === 'en-US'
+          ? `❌ An error occurred while processing your message. Please try again.`
+          : currentLanguage === 'es-ES'
+          ? `❌ Ocurrió un error al procesar su mensaje. Por favor, inténtelo de nuevo.`
+          : `❌ Ocorreu um erro ao processar sua mensagem. Tente novamente por favor.`,
         timestamp: new Date(),
       };
 
@@ -367,8 +516,14 @@ Se o problema persistir, entre em contato com o suporte. 😊`,
   };
 
   const clearChat = () => {
-    setMessages([WELCOME_MESSAGE]);
-    saveMessages([WELCOME_MESSAGE]);
+    const welcome: Message = {
+      id: "welcome",
+      role: "assistant",
+      content: welcomeMessage,
+      timestamp: new Date(),
+    };
+    setMessages([welcome]);
+    saveMessages([welcome]);
     stopSpeaking();
   };
 
@@ -388,7 +543,8 @@ Se o problema persistir, entre em contato com o suporte. 😊`,
         (error) => {
           console.error('Speech recognition error:', error);
           setIsListening(false);
-        }
+        },
+        langConfig.recognitionLang
       );
 
       if (recognition) {
@@ -398,39 +554,44 @@ Se o problema persistir, entre em contato com o suporte. 😊`,
         setIsListening(true);
       }
     }
-  }, [isListening]);
+  }, [isListening, langConfig.recognitionLang]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage(inputValue);
+  const handleLanguageChange = (code: string) => {
+    setCurrentLanguage(code);
+    setVoiceSettings(prev => ({ ...prev, language: code }));
+    const bestVoice = getBestVoiceForLanguage(code);
+    if (bestVoice) {
+      setVoiceSettings(prev => ({ ...prev, voiceURI: bestVoice.voiceURI }));
     }
   };
 
-  const updateUserContext = (key: keyof UserContext, value: any) => {
-    setUserContext(prev => {
-      const updated = { ...prev, [key]: value };
-      saveUserContext(updated);
-      return updated;
-    });
+  const handleVoiceSettingsChange = (key: keyof VoiceSettings, value: any) => {
+    setVoiceSettings(prev => ({ ...prev, [key]: value }));
   };
 
   const testVoice = () => {
-    speak("Olá! Sou o Spotinho. Minha voz está funcionando! 🎉", voiceSettings);
+    const testText = currentLanguage === 'en-US'
+      ? "Hello! My voice is working! 🎉"
+      : currentLanguage === 'es-ES'
+      ? "¡Hola! ¡Mi voz está funcionando! 🎉"
+      : "Olá! Minha voz está funcionando! 🎉";
+    speak(testText, voiceSettings);
   };
+
+  const languageVoices = getMasculineVoices(currentLanguage);
 
   return (
     <>
       <Head>
-        <title>Chat com Spotinho - Spot Render</title>
-        <meta name="description" content="Converse com o Spotinho, assistente virtual do Spot Render" />
+        <title>Chat with Spotinho - Spot Render</title>
+        <meta name="description" content="Chat with Spotinho, Spot Render's virtual assistant" />
       </Head>
 
       <div className="chat-page">
         <header className="chat-header">
           <div className="header-left">
             <Link href="/" className="back-link">
-              ← Voltar
+              ← Back
             </Link>
           </div>
           <div className="header-center">
@@ -449,23 +610,27 @@ Se o problema persistir, entre em contato com o suporte. 😊`,
             <div>
               <h1>Spotinho 🤖</h1>
               <span className="status">
-                {ollamaStatus?.available ? "🟢 Online com IA" : "🔴 Offline"}
-                {voiceSettings.enabled && " • 🔊 Voz"}
+                {ollamaStatus?.available ? "🟢 Online with AI" : "🔴 Offline"}
+                {voiceSettings.enabled && " • 🔊 Voice"}
               </span>
             </div>
           </div>
           <div className="header-right">
+            <LanguageSelector
+              currentLanguage={langConfig}
+              onLanguageChange={handleLanguageChange}
+            />
             <button
               className={`icon-btn ${voiceSettings.enabled ? 'active' : ''}`}
               onClick={toggleVoice}
-              title={voiceSettings.enabled ? "Desativar voz" : "Ativar voz"}
+              title={voiceSettings.enabled ? "Disable voice" : "Enable voice"}
             >
               {voiceSettings.enabled ? "🔊" : "🔇"}
             </button>
             <button
               className={`icon-btn ${isListening ? 'listening' : ''}`}
               onClick={toggleListening}
-              title={isListening ? "Parar de ouvir" : "Falar"}
+              title={isListening ? "Stop listening" : "Speak"}
               disabled={!isRecognitionSupported()}
             >
               {isListening ? "⏹️" : "🎤"}
@@ -473,7 +638,7 @@ Se o problema persistir, entre em contato com o suporte. 😊`,
             <button
               className="icon-btn"
               onClick={testVoice}
-              title="Testar voz"
+              title="Test voice"
               disabled={!voiceSettings.enabled}
             >
               🔊
@@ -481,18 +646,18 @@ Se o problema persistir, entre em contato com o suporte. 😊`,
             <button
               className="icon-btn"
               onClick={() => setShowVoiceSettings(!showVoiceSettings)}
-              title="Configurações de voz"
+              title="Voice settings"
             >
               ⚙️
             </button>
             <button
               className="icon-btn"
               onClick={() => setShowDeviceInfo(!showDeviceInfo)}
-              title="Informações do dispositivo"
+              title="Device information"
             >
               📱
             </button>
-            <button className="clear-btn" onClick={clearChat} title="Limpar conversa">
+            <button className="clear-btn" onClick={clearChat} title="Clear conversation">
               🗑️
             </button>
           </div>
@@ -500,58 +665,58 @@ Se o problema persistir, entre em contato com o suporte. 😊`,
 
         {showVoiceSettings && (
           <div className="settings-panel">
-            <h3>Configurações de Voz 🔊</h3>
+            <h3>🔊 Voice Settings</h3>
             <label className="setting-row">
               <input
                 type="checkbox"
                 checked={voiceSettings.enabled}
-                onChange={(e) => setVoiceSettings(prev => ({ ...prev, enabled: e.target.checked }))}
+                onChange={(e) => handleVoiceSettingsChange('enabled', e.target.checked)}
               />
-              Ativar síntese de voz (TTS)
+              Enable voice synthesis (TTS)
             </label>
             {voiceSettings.enabled && (
               <>
                 <label className="setting-row">
-                  Voz:
+                  Voice:
                   <select
                     value={voiceSettings.voiceURI}
-                    onChange={(e) => setVoiceSettings(prev => ({ ...prev, voiceURI: e.target.value }))}
+                    onChange={(e) => handleVoiceSettingsChange('voiceURI', e.target.value)}
                   >
-                    {availableVoices.length > 0 ? (
-                      availableVoices.map((voice) => (
+                    {languageVoices.length > 0 ? (
+                      languageVoices.map((voice) => (
                         <option key={voice.voiceURI} value={voice.voiceURI}>
                           {voice.name} ({voice.lang})
                         </option>
                       ))
                     ) : (
-                      <option value="">Carregando vozes...</option>
+                      <option value="">No voices available</option>
                     )}
                   </select>
                 </label>
                 <label className="setting-row">
-                  Velocidade: {voiceSettings.rate.toFixed(1)}
+                  Speed: {voiceSettings.rate.toFixed(1)}
                   <input
                     type="range"
                     min="0.5"
                     max="2"
                     step="0.1"
                     value={voiceSettings.rate}
-                    onChange={(e) => setVoiceSettings(prev => ({ ...prev, rate: parseFloat(e.target.value) }))}
+                    onChange={(e) => handleVoiceSettingsChange('rate', parseFloat(e.target.value))}
                   />
                 </label>
                 <label className="setting-row">
-                  Tom: {voiceSettings.pitch.toFixed(1)}
+                  Pitch: {voiceSettings.pitch.toFixed(1)}
                   <input
                     type="range"
                     min="0.5"
                     max="2"
                     step="0.1"
                     value={voiceSettings.pitch}
-                    onChange={(e) => setVoiceSettings(prev => ({ ...prev, pitch: parseFloat(e.target.value) }))}
+                    onChange={(e) => handleVoiceSettingsChange('pitch', parseFloat(e.target.value))}
                   />
                 </label>
                 <button className="test-btn" onClick={testVoice}>
-                  🔊 Testar voz
+                  🔊 Test voice
                 </button>
               </>
             )}
@@ -560,41 +725,41 @@ Se o problema persistir, entre em contato com o suporte. 😊`,
 
         {showDeviceInfo && clientInfo && (
           <div className="device-panel">
-            <h3>📱 Informações do Dispositivo</h3>
+            <h3>📱 Device Information</h3>
             <div className="device-grid">
               <div className="device-item">
-                <span className="device-label">Localização</span>
-                <span className="device-value">{clientInfo.location || 'Desconhecida'}</span>
+                <span className="device-label">Location</span>
+                <span className="device-value">{clientInfo.location || 'Unknown'}</span>
               </div>
               <div className="device-item">
                 <span className="device-label">IP</span>
-                <span className="device-value">{clientInfo.ip || 'Não identificado'}</span>
+                <span className="device-value">{clientInfo.ip || 'Not identified'}</span>
               </div>
               <div className="device-item">
-                <span className="device-label">Operadora</span>
-                <span className="device-value">{clientInfo.isp || 'Não identificada'}</span>
+                <span className="device-label">ISP</span>
+                <span className="device-value">{clientInfo.isp || 'Not identified'}</span>
               </div>
               <div className="device-item">
-                <span className="device-label">Velocidade</span>
-                <span className="device-value">{clientInfo.internetSpeed || 'Não medida'}</span>
+                <span className="device-label">Speed</span>
+                <span className="device-value">{clientInfo.internetSpeed || 'Not measured'}</span>
               </div>
               <div className="device-item">
-                <span className="device-label">Tipo</span>
+                <span className="device-label">Type</span>
                 <span className="device-value">
-                  {clientInfo.deviceType === 'mobile' ? '📱 Celular' :
-                   clientInfo.deviceType === 'tablet' ? '📱 Tablet' : '💻 Computador'}
+                  {clientInfo.deviceType === 'mobile' ? '📱 Mobile' :
+                   clientInfo.deviceType === 'tablet' ? '📱 Tablet' : '💻 Computer'}
                 </span>
               </div>
               <div className="device-item">
-                <span className="device-label">Sistema</span>
+                <span className="device-label">OS</span>
                 <span className="device-value">{clientInfo.os}{clientInfo.osVersion ? ` ${clientInfo.osVersion}` : ''}</span>
               </div>
               <div className="device-item">
-                <span className="device-label">Navegador</span>
+                <span className="device-label">Browser</span>
                 <span className="device-value">{clientInfo.browser}{clientInfo.browserVersion ? ` ${clientInfo.browserVersion}` : ''}</span>
               </div>
               <div className="device-item">
-                <span className="device-label">Tela</span>
+                <span className="device-label">Screen</span>
                 <span className="device-value">{clientInfo.screenResolution}</span>
               </div>
             </div>
@@ -660,36 +825,38 @@ Se o problema persistir, entre em contato com o suporte. 😊`,
         </main>
 
         <div className="suggestions">
-          <button className="suggestion-btn" onClick={() => handleSuggestionClick("Como enviar um job de renderização?")}>
-            📤 Como enviar job?
+          <button className="suggestion-btn" onClick={() => handleSuggestionClick("How to send a rendering job?")}>
+            📤 How to send job?
           </button>
-          <button className="suggestion-btn" onClick={() => handleSuggestionClick("Quais formatos são aceitos?")}>
-            📁 Formatos aceitos
+          <button className="suggestion-btn" onClick={() => handleSuggestionClick("What formats are supported?")}>
+            📁 Supported formats
           </button>
-          <button className="suggestion-btn" onClick={() => handleSuggestionClick("Ver informações do meu dispositivo")}>
-            📱 Meu dispositivo
+          <button className="suggestion-btn" onClick={() => handleSuggestionClick("Show my device information")}>
+            📱 My device
           </button>
-          <button className="suggestion-btn" onClick={() => handleSuggestionClick("Testar comando de voz")}>
-            🎤 Testar voz
-          </button>
-          <button className="suggestion-btn" onClick={() => handleSuggestionClick("Status dos meus jobs")}>
-            📊 Status dos jobs
+          <button className="suggestion-btn" onClick={() => handleSuggestionClick("Test voice")}>
+            🎤 Test voice
           </button>
         </div>
 
         <footer className="chat-input">
           <input
             type="text"
-            placeholder="Digite sua mensagem ou clique 🎤 para falar..."
+            placeholder="Type your message or click 🎤 to speak..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage(inputValue);
+              }
+            }}
           />
           <button
             className={`mic-btn ${isListening ? 'listening' : ''}`}
             onClick={toggleListening}
             disabled={!isRecognitionSupported()}
-            title={isListening ? "Parar de ouvir" : "Falar"}
+            title={isListening ? "Stop listening" : "Speak"}
           >
             {isListening ? "⏹️" : "🎤"}
           </button>
@@ -746,6 +913,7 @@ Se o problema persistir, entre em contato com o suporte. 😊`,
             display: flex;
             gap: 0.5rem;
             align-items: center;
+            flex-wrap: wrap;
           }
 
           .header-center {

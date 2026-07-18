@@ -13,7 +13,7 @@ import {
   stopTrack,
   createSpeechRecognition,
   getAvailableVoices,
-  getPortugueseVoices,
+  getVoicesByLanguage,
   isRecognitionSupported,
   MediaStreamState,
 } from "../utils/voiceUtils";
@@ -211,7 +211,7 @@ export default function SpotinhoWidget() {
     checkOllamaStatus();
     getClientInfo().then(setClientInfo);
     if (isSpeechSupported()) {
-      const voices = getPortugueseVoices();
+      const voices = getVoicesByLanguage('pt-BR');
       setAvailableVoices(voices);
       if (voices.length > 0 && !voiceSettings.voiceURI) {
         setVoiceSettings(prev => ({ ...prev, voiceURI: voices[0].voiceURI }));

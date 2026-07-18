@@ -4,6 +4,103 @@ export interface VoiceSettings {
   volume: number;
   rate: number;
   pitch: number;
+  language: string;
+}
+
+export interface LanguageConfig {
+  code: string;
+  name: string;
+  nativeName: string;
+  voiceLang: string;
+  recognitionLang: string;
+  flag: string;
+}
+
+export const SUPPORTED_LANGUAGES: LanguageConfig[] = [
+  {
+    code: 'pt-BR',
+    name: 'Português (Brasil)',
+    nativeName: 'Português (Brasil)',
+    voiceLang: 'pt-BR',
+    recognitionLang: 'pt-BR',
+    flag: '🇧🇷',
+  },
+  {
+    code: 'en-US',
+    name: 'English (US)',
+    nativeName: 'English (US)',
+    voiceLang: 'en-US',
+    recognitionLang: 'en-US',
+    flag: '🇺🇸',
+  },
+  {
+    code: 'es-ES',
+    name: 'Español',
+    nativeName: 'Español',
+    voiceLang: 'es-ES',
+    recognitionLang: 'es-ES',
+    flag: '🇪🇸',
+  },
+];
+
+export function getLanguageByCode(code: string): LanguageConfig {
+  return SUPPORTED_LANGUAGES.find(l => l.code === code) || SUPPORTED_LANGUAGES[0];
+}
+
+export function detectLanguageFromBrowser(): string {
+  if (typeof window === 'undefined') return 'pt-BR';
+
+  const browserLang = navigator.language || (navigator as any).userLanguage || 'pt-BR';
+
+  if (browserLang.startsWith('pt')) return 'pt-BR';
+  if (browserLang.startsWith('en')) return 'en-US';
+  if (browserLang.startsWith('es')) return 'es-ES';
+
+  return 'pt-BR';
+}
+
+export function detectLanguageFromGeolocation(): Promise<string> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      resolve(detectLanguageFromBrowser());
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const response = await fetch(
+            `https://ipapi.co/${position.coords.latitude},${position.coords.longitude}/json/`,
+            { signal: AbortSignal.timeout(5000) }
+          );
+          if (response.ok) {
+            const data = await response.json();
+            const country = data.country_code || data.country;
+
+            const langMap: Record<string, string> = {
+              'BR': 'pt-BR',
+              'US': 'en-US',
+              'GB': 'en-US',
+              'ES': 'es-ES',
+              'MX': 'es-ES',
+              'AR': 'es-ES',
+              'CO': 'es-ES',
+            };
+
+            resolve(langMap[country] || detectLanguageFromBrowser());
+          } else {
+            resolve(detectLanguageFromBrowser());
+          }
+        } catch {
+          resolve(detectLanguageFromBrowser());
+        }
+      },
+      () => {
+        resolve(detectLanguageFromBrowser());
+      },
+      { timeout: 5000 }
+    );
+  });
 }
 
 const VOICE_SETTINGS_KEY = 'spotinho_voice_settings';
@@ -24,6 +121,7 @@ export function loadVoiceSettings(): VoiceSettings {
     volume: 1,
     rate: 1,
     pitch: 1,
+    language: detectLanguageFromBrowser(),
   };
 
   if (typeof window === 'undefined') return defaults;
@@ -44,13 +142,49 @@ export function getAvailableVoices(): SpeechSynthesisVoice[] {
   return window.speechSynthesis.getVoices();
 }
 
-export function getPortugueseVoices(): SpeechSynthesisVoice[] {
+export function getVoicesByLanguage(lang: string): SpeechSynthesisVoice[] {
   const voices = getAvailableVoices();
   return voices.filter(v =>
-    v.lang.startsWith('pt') ||
-    v.name.toLowerCase().includes('portuguese') ||
-    v.name.toLowerCase().includes('brasil')
+    v.lang.startsWith(lang.split('-')[0]) ||
+    v.lang === lang
   );
+}
+
+export function getMasculineVoices(lang: string): SpeechSynthesisVoice[] {
+  const voices = getVoicesByLanguage(lang);
+
+  const masculinePatterns = [
+    'male', 'masculine', 'homem', ' homem', 'maschio',
+    'masculin', 'pria', 'varonil', 'garoto',
+  ];
+
+  return voices.filter(v => {
+    const nameLower = v.name.toLowerCase();
+    const langLower = v.lang.toLowerCase();
+
+    const isMasculine = masculinePatterns.some(p => nameLower.includes(p));
+    const isDefaultOrGoogle = nameLower.includes('google') && !nameLower.includes('female');
+    const isNotFemale = !nameLower.includes('female') && !nameLower.includes('femin') && !nameLower.includes('mulher');
+
+    return (isMasculine || isDefaultOrGoogle) && isNotFemale;
+  });
+}
+
+export function getBestVoiceForLanguage(lang: string): SpeechSynthesisVoice | null {
+  const voices = getMasculineVoices(lang);
+
+  if (voices.length > 0) {
+    const googleVoice = voices.find(v => v.name.toLowerCase().includes('google'));
+    if (googleVoice) return googleVoice;
+    return voices[0];
+  }
+
+  const allVoices = getVoicesByLanguage(lang);
+  if (allVoices.length > 0) {
+    return allVoices[0];
+  }
+
+  return null;
 }
 
 export function speak(text: string, settings: VoiceSettings): void {
@@ -63,10 +197,20 @@ export function speak(text: string, settings: VoiceSettings): void {
   utterance.volume = settings.volume;
   utterance.rate = settings.rate;
   utterance.pitch = settings.pitch;
+  utterance.lang = settings.language || 'pt-BR';
 
   if (settings.voiceURI) {
     const voice = getAvailableVoices().find(v => v.voiceURI === settings.voiceURI);
-    if (voice) utterance.voice = voice;
+    if (voice) {
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+    }
+  } else {
+    const bestVoice = getBestVoiceForLanguage(settings.language || 'pt-BR');
+    if (bestVoice) {
+      utterance.voice = bestVoice;
+      utterance.lang = bestVoice.lang;
+    }
   }
 
   window.speechSynthesis.speak(utterance);
@@ -134,7 +278,8 @@ export function stopTrack(track: MediaStreamTrack | null): void {
 
 export function createSpeechRecognition(
   onResult: (transcript: string) => void,
-  onError: (error: string) => void
+  onError: (error: string) => void,
+  lang: string = 'pt-BR'
 ): any {
   if (!isRecognitionSupported()) return null;
 
@@ -143,7 +288,7 @@ export function createSpeechRecognition(
 
   recognition.continuous = false;
   recognition.interimResults = true;
-  recognition.lang = 'pt-BR';
+  recognition.lang = lang;
 
   recognition.onresult = (event: any) => {
     let transcript = '';
