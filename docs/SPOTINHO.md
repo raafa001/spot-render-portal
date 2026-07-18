@@ -15,35 +15,93 @@ Spotinho é o assistente virtual do Spot Render, alimentado por IA usando Ollama
 - Mesma conversa do widget (sincronização via localStorage)
 - Acesso direto via botão "Falar com Spotinho" na página inicial
 
+### Informações do Dispositivo
+O Spotinho detecta automaticamente:
+- 📍 **Localização**: Cidade, região, país (via IP)
+- 🔢 **IP**: Endereço IP público
+- 🏢 **Operadora**: ISP (Internet Service Provider)
+- 📶 **Velocidade**: Velocidade da conexão
+- 📱 **Tipo de dispositivo**: Celular, Tablet ou Computador
+- 🖥️ **Sistema Operacional**: Windows, macOS, Linux, Android, iOS
+- 🌐 **Navegador**: Nome e versão
+- 🗣️ **Idioma**: Idioma do navegador
+- ⏰ **Fuso horário**: Timezone configurado
+- 📐 **Resolução da tela**: Largura x Altura
+
+### Síntese de Voz (TTS)
+O Spotinho pode falar suas respostas!
+
+**Funcionalidades:**
+- Voz em português brasileiro
+- Velocidade ajustável (0.5x a 2x)
+- Tom ajustável
+- Seleção de voz entre as disponíveis no sistema
+
+**Controles:**
+- 🔊 Ativar/desativar voz
+- 🎤 Testar voz
+- ⚙️ Configurações de voz
+
+### Comando de Voz
+O Spotinho pode ouvir e entender comandos de voz!
+
+**Como usar:**
+1. Clique no ícone 🎤 (microfone)
+2. Permita o acesso ao microfone
+3. Fale sua mensagem
+4. O texto aparecerá automaticamente
+5. Clique em enviar ou aguarde o envio automático
+
+### Vídeo (Câmera)
+O widget suporta preview de câmera:
+
+1. Clique em 📷 para ligar a câmera
+2. O preview aparece na parte superior do chat
+3. Clique novamente para desligar
+
 ### Sincronização
-Ambas as interfaces (widget e página completa) compartilham o mesmo histórico de mensagens via `localStorage` e eventos `storage`, garantindo que você pode continuar a conversa em qualquer uma delas.
+Ambas as interfaces (widget e página completa) compartilham:
+- Histórico de mensagens via `localStorage`
+- Eventos `storage` para sincronização em tempo real
+- Preferências de voz
+- Contexto do usuário (nome, email, projeto)
+
+### Criação de Jobs
+O Spotinho pode ajudá-lo a criar jobs de renderização!
+
+**Informações que o Spotinho coleta:**
+1. Arquivos de cena (.fbx, .obj, .blend, etc.)
+2. Nome do projeto
+3. Variação/correção (ex: v1, v2, correção)
+4. Nome do artista
+5. Email para aviso
+6. Render list (CSV/XLSX)
+7. Preferências:
+   - Receber aviso quando o job finalizar
+   - Lembrar email para próximos envios
+   - Esta submissão é uma correção
+
+**Fluxo:**
+1. Diga "Quero enviar um job" ou "Criar job"
+2. O Spotinho fará perguntas para coletar as informações
+3. Após coletar tudo, você será instruído a usar o formulário
+4. Suas informações ficam salvas para próximos jobs
 
 ## Configuração
 
 ### Variáveis de Ambiente
 
+**Frontend (spot-render-portal):**
 ```bash
 NEXT_PUBLIC_API_URL=http://api.spot-render.local
 NEXT_PUBLIC_AI_API_URL=http://api.spot-render.local
 ```
 
-### Backend (spot-render-api)
-
-O backend precisa das seguintes variáveis de ambiente para o Ollama:
-
+**Backend (spot-render-api):**
 ```bash
 OLLAMA_BASE_URL=http://host.docker.internal:11434
 OLLAMA_MODEL=minimax-m3:cloud
 ```
-
-> **Nota**: `host.docker.internal` é usado para acessar o Ollama rodando no host Docker a partir de containers Kubernetes em Docker Desktop.
-
-## Modelos Suportados
-
-O Spotinho funciona com qualquer modelo Ollama. Modelos testados:
-- `minimax-m3:cloud` (padrão) - Modelo cloud com capacidades de reasoning
-- `llama3.2:latest` - Modelo open source
-- `qwen2:0.5b` - Modelo leve para testes
 
 ## API Endpoints
 
@@ -101,13 +159,17 @@ O Spotinho possui filtros de segurança que:
    kubectl exec -it <pod-backend> -- python3 -c "import httpx; print(httpx.get('http://host.docker.internal:11434/api/tags').status_code)"
    ```
 
-3. Verifique as variáveis de ambiente do ConfigMap:
-   ```bash
-   kubectl get configmap spot-render-backend-config -n spot-render -o yaml
-   ```
+### microfone não funciona
 
-### Erro de CORS
-O backend está configurado para permitir origens específicas. Adicione a origem do frontend ao CORS_ALLOW_ORIGINS no ConfigMap.
+1. Verifique se o navegador suporta Web Speech API
+2. Permita o acesso ao microfone no navegador
+3. Verifique se há outro aplicativo usando o microfone
+
+### Voz não funciona
+
+1. Verifique se a síntese de voz está ativada
+2. Verifique se há vozes em português disponíveis
+3. Tente selecionar uma voz diferente nas configurações
 
 ## Desenvolvimento Local
 
