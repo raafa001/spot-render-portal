@@ -1,10 +1,47 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: spot-render-unified
+  name: spot-render-api
   namespace: spot-render
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /api/(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: spot-render-backend-stable
+            port:
+              number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: spot-render-ai
+  namespace: spot-render
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /ai/
+        pathType: Prefix
+        backend:
+          service:
+            name: spot-render-backend-stable
+            port:
+              number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: spot-render-web
+  namespace: spot-render
 spec:
   ingressClassName: nginx
   rules:
@@ -17,17 +54,3 @@ spec:
             name: spot-render-web-stable
             port:
               number: 3000
-      - path: /api/
-        pathType: Prefix
-        backend:
-          service:
-            name: spot-render-backend-stable
-            port:
-              number: 80
-      - path: /ai/
-        pathType: Prefix
-        backend:
-          service:
-            name: spot-render-backend-stable
-            port:
-              number: 80
