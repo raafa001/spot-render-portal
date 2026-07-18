@@ -203,7 +203,7 @@ export default function SpotinhoWidget() {
   });
   const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {

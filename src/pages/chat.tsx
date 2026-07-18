@@ -1,4 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+
+declare global {
+  interface Window {
+    webkitSpeechRecognition: any;
+    SpeechRecognition: any;
+  }
+}
 import axios from "axios";
 import Head from "next/head";
 import Link from "next/link";
@@ -201,7 +208,7 @@ export default function ChatPage() {
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   const [showDeviceInfo, setShowDeviceInfo] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);

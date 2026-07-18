@@ -135,7 +135,7 @@ export function stopTrack(track: MediaStreamTrack | null): void {
 export function createSpeechRecognition(
   onResult: (transcript: string) => void,
   onError: (error: string) => void
-): SpeechRecognition | null {
+): any {
   if (!isRecognitionSupported()) return null;
 
   const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -145,7 +145,7 @@ export function createSpeechRecognition(
   recognition.interimResults = true;
   recognition.lang = 'pt-BR';
 
-  recognition.onresult = (event: SpeechRecognitionEvent) => {
+  recognition.onresult = (event: any) => {
     let transcript = '';
     for (let i = event.resultIndex; i < event.results.length; i++) {
       transcript += event.results[i][0].transcript;
@@ -153,7 +153,7 @@ export function createSpeechRecognition(
     onResult(transcript);
   };
 
-  recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+  recognition.onerror = (event: any) => {
     onError(event.error);
   };
 

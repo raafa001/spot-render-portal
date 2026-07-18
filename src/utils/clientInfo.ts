@@ -1,4 +1,4 @@
-interface ClientInfo {
+export interface ClientInfo {
   ip: string;
   location: string;
   isp: string;
@@ -99,7 +99,10 @@ export async function getClientInfo(): Promise<ClientInfo> {
 
   // IP & location via free API
   try {
-    const response = await fetch('https://ipapi.co/json/', { timeout: 5000 });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const response = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+    clearTimeout(timeout);
     if (response.ok) {
       const data = await response.json();
       info.ip = data.ip || '';
@@ -114,7 +117,10 @@ export async function getClientInfo(): Promise<ClientInfo> {
   } catch (e) {
     // Try fallback
     try {
-      const fallback = await fetch('https://ipapi.co/json/', { timeout: 3000 });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      const fallback = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+      clearTimeout(timeout);
       if (fallback.ok) {
         const data = await fallback.json();
         info.ip = data.ip || '';
