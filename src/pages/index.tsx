@@ -5,7 +5,7 @@ import axios from "axios";
 import UploadForm from "../components/UploadForm";
 import JobsTable from "../components/JobsTable";
 import SpotinhoWidget from "../components/SpotinhoWidget";
-import { LanguageSelector } from "../components/LanguageSelector";
+import { LanguageSelector, useLanguage, getPortalText } from "../components/LanguageSelector";
 import { getApiUrl } from "../utils/apiUtils";
 
 interface QuickStats {
@@ -15,6 +15,8 @@ interface QuickStats {
 }
 
 export default function Home() {
+  const { language } = useLanguage();
+  const t = getPortalText(language.code);
   const [stats, setStats] = useState<QuickStats>({ total: 0, running: 0, completed: 0 });
 
   useEffect(() => {
@@ -34,75 +36,73 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Spot Render Portal</title>
-        <meta name="description" content="Envie jobs de renderização e acompanhe o progresso em um painel bonito e responsivo." />
+        <title>{t.pageTitle}</title>
+        <meta name="description" content={t.pageDescription} />
       </Head>
       <div className="page">
         <header className="hero">
           <div className="hero__nav">
-            <div className="brand">Spot Render</div>
+            <div className="brand">{t.brand}</div>
             <div className="hero__links">
-              <Link href="/statistics">Estatísticas</Link>
+              <Link href="/statistics">{t.nav.statistics}</Link>
               <a href="https://github.com/raafa001/spot-render" target="_blank" rel="noreferrer">
-                Repositórios
+                {t.nav.repositories}
               </a>
               <Link href="/docs">
-                TechDocs
+                {t.nav.techDocs}
               </Link>
-              <button onClick={() => document.getElementById("upload-card")?.scrollIntoView({ behavior: "smooth" })}>Enviar job</button>
+              <button onClick={() => document.getElementById("upload-card")?.scrollIntoView({ behavior: "smooth" })}>{t.nav.submitJob}</button>
               <LanguageSelector compact />
             </div>
           </div>
 
           <div className="hero__grid">
             <div className="hero__copy">
-              <p className="eyebrow">Render orchestration • Spot + FinOps</p>
-              <h1>Build powerful renders fast</h1>
+              <p className="eyebrow">{t.hero.eyebrow}</p>
+              <h1>{t.hero.title}</h1>
               <p>
-                Render lists seguras, workers em spot instances e um painel que funciona em qualquer dispositivo. Faça upload, acompanhe e receba alertas de forma simples.
+                {t.hero.description}
               </p>
               <div className="hero__actions">
                 <button className="primary" onClick={() => document.getElementById("upload-card")?.scrollIntoView({ behavior: "smooth" })}>
-                  Começar agora
+                  {t.hero.startNow}
                 </button>
                 <a href="https://spot-render.local/docs" target="_blank" rel="noreferrer">
-                  Ver documentação →
+                  {t.hero.viewDocs}
                 </a>
               </div>
               <ul className="hero__badges">
-                <li>Workers em spot + autoscaling</li>
-                <li>Uploads criptografados</li>
-                <li>Portal, CLI e API alinhados</li>
+                {t.hero.badges.map((badge, i) => <li key={i}>{badge}</li>)}
               </ul>
             </div>
 
             <div className="hero__panel">
               <div className="hero__welcome">
-                <h3>Bem-vindo ao Spot Render! 🎨</h3>
-                <p>Plataforma de renderização 3D colaborativa para estúdios e artistas.</p>
+                <h3>{t.hero.welcomeTitle}</h3>
+                <p>{t.hero.welcomeSubtitle}</p>
                 <div className="hero__metrics">
                   <div className="metric">
                     <strong>{stats.total}</strong>
-                    <span>Total Jobs</span>
+                    <span>{t.hero.totalJobs}</span>
                   </div>
                   <div className="metric">
                     <strong>{stats.running}</strong>
-                    <span>Em Execução</span>
+                    <span>{t.hero.running}</span>
                   </div>
                   <div className="metric">
                     <strong>{stats.completed}</strong>
-                    <span>Concluídos</span>
+                    <span>{t.hero.completed}</span>
                   </div>
                 </div>
                 <div className="hero__quick-actions">
                   <Link href="/docs" className="quick-action">
-                    📚 Ver documentação
+                    {t.hero.viewDocsLink}
                   </Link>
                   <Link href="/statistics" className="quick-action">
-                    📊 Estatísticas
+                    {t.hero.viewStatsLink}
                   </Link>
                   <Link href="/chat" className="quick-action spotinho-action">
-                    🤖 Falar com Spotinho
+                    {t.hero.talkToSpotinho}
                   </Link>
                 </div>
               </div>
@@ -114,10 +114,10 @@ export default function Home() {
           <section className="panel">
             <div className="panel__header">
               <div>
-                <p className="eyebrow">Submit</p>
-                <h2>Enviar novo job</h2>
+                <p className="eyebrow">{t.submit.eyebrow}</p>
+                <h2>{t.submit.title}</h2>
               </div>
-              <p>Defina projeto, variação e anexos. Notificações opcionais para liberar o time.</p>
+              <p>{t.submit.description}</p>
             </div>
             <UploadForm />
           </section>
@@ -125,10 +125,10 @@ export default function Home() {
           <section className="panel">
             <div className="panel__header">
               <div>
-                <p className="eyebrow">Monitoramento</p>
-                <h2>Jobs em andamento</h2>
+                <p className="eyebrow">{t.monitoring.eyebrow}</p>
+                <h2>{t.monitoring.title}</h2>
               </div>
-              <p>Status, progresso e locais de armazenamento atualizam automaticamente.</p>
+              <p>{t.monitoring.description}</p>
             </div>
             <JobsTable />
           </section>

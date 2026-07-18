@@ -3,7 +3,7 @@ import axios from "axios";
 import Head from "next/head";
 import Link from "next/link";
 import SpotinhoWidget from "../components/SpotinhoWidget";
-import { LanguageSelector } from "../components/LanguageSelector";
+import { LanguageSelector, useLanguage, getPortalText } from "../components/LanguageSelector";
 import { getApiUrl } from "../utils/apiUtils";
 
 interface HealthComponent {
@@ -18,6 +18,8 @@ interface HealthSummary {
 }
 
 export default function Status() {
+  const { language } = useLanguage();
+  const t = getPortalText(language.code);
   const [health, setHealth] = useState<HealthSummary | null>(null);
 
   useEffect(() => {
@@ -27,22 +29,22 @@ export default function Status() {
   return (
     <>
       <Head>
-        <title>Status da Plataforma</title>
+        <title>{t.status.pageTitle}</title>
       </Head>
       <main className="container">
         <nav className="nav">
-          <div className="brand">Spot Render</div>
+          <div className="brand">{t.brand}</div>
           <div className="nav__links">
-            <Link href="/">Upload</Link>
-            <Link href="/statistics">Estatísticas</Link>
-            <Link href="/docs">TechDocs</Link>
-            <a href="https://github.com/raafa001/spot-render" target="_blank" rel="noreferrer">Repositórios</a>
-            <Link href="/chat">Spotinho</Link>
+            <Link href="/">{t.nav.upload}</Link>
+            <Link href="/statistics">{t.nav.statistics}</Link>
+            <Link href="/docs">{t.nav.techDocs}</Link>
+            <a href="https://github.com/raafa001/spot-render" target="_blank" rel="noreferrer">{t.nav.repositories}</a>
+            <Link href="/chat">{t.nav.spotinho}</Link>
             <LanguageSelector compact />
           </div>
         </nav>
-        <h1>Status dos Componentes</h1>
-        {!health && <p>Carregando...</p>}
+        <h1>{t.status.title}</h1>
+        {!health && <p>{t.status.loading}</p>}
         {health && (
           <div className="status-grid">
             {health.components.map((component) => (

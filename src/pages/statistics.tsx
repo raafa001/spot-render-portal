@@ -3,7 +3,7 @@ import Head from "next/head";
 import Link from "next/link";
 import axios from "axios";
 import SpotinhoWidget from "../components/SpotinhoWidget";
-import { LanguageSelector } from "../components/LanguageSelector";
+import { LanguageSelector, useLanguage, getPortalText } from "../components/LanguageSelector";
 import { getApiUrl } from "../utils/apiUtils";
 
 interface JobStatistics {
@@ -51,6 +51,8 @@ interface DailyStatistics {
 type DateRange = "today" | "7days" | "30days" | "90days" | "custom";
 
 export default function StatisticsPage() {
+  const { language } = useLanguage();
+  const t = getPortalText(language.code);
   const [stats, setStats] = useState<StatisticsResponse | null>(null);
   const [dailyStats, setDailyStats] = useState<DailyStatistics[]>([]);
   const [loading, setLoading] = useState(true);
@@ -142,46 +144,46 @@ export default function StatisticsPage() {
   return (
     <>
       <Head>
-        <title>Estatísticas - Spot Render Portal</title>
+        <title>{t.statistics.pageTitle}</title>
       </Head>
       <div className="page">
         <header className="header">
           <nav className="nav">
-            <div className="brand">Spot Render</div>
+            <div className="brand">{t.brand}</div>
             <div className="nav__links">
-              <Link href="/">Upload</Link>
-              <Link href="/statistics">Estatísticas</Link>
-              <Link href="/docs">TechDocs</Link>
-              <a href="https://github.com/raafa001/spot-render" target="_blank" rel="noreferrer">Repositórios</a>
-              <Link href="/chat">Spotinho</Link>
+              <Link href="/">{t.nav.upload}</Link>
+              <Link href="/statistics">{t.nav.statistics}</Link>
+              <Link href="/docs">{t.nav.techDocs}</Link>
+              <a href="https://github.com/raafa001/spot-render" target="_blank" rel="noreferrer">{t.nav.repositories}</a>
+              <Link href="/chat">{t.nav.spotinho}</Link>
               <LanguageSelector compact />
             </div>
           </nav>
-          <h1>Estatísticas de Renderização</h1>
-          <p>Acompanhe o desempenho e成功率 dos jobs de renderização</p>
+          <h1>{t.statistics.title}</h1>
+          <p>{t.statistics.subtitle}</p>
         </header>
 
         <div className="filters">
           <div className="filter-group">
-            <label>Período:</label>
+            <label>{t.statistics.period}</label>
             <select value={dateRange} onChange={(e) => setDateRange(e.target.value as DateRange)}>
-              <option value="today">Hoje</option>
-              <option value="7days">Últimos 7 dias</option>
-              <option value="30days">Últimos 30 dias</option>
-              <option value="90days">Últimos 90 dias</option>
-              <option value="custom">Personalizado</option>
+              <option value="today">{t.statistics.today}</option>
+              <option value="7days">{t.statistics.last7Days}</option>
+              <option value="30days">{t.statistics.last30Days}</option>
+              <option value="90days">{t.statistics.last90Days}</option>
+              <option value="custom">{t.statistics.custom}</option>
             </select>
           </div>
 
           {dateRange === "custom" && (
             <div className="filter-group">
-              <label>De:</label>
+              <label>{t.statistics.from}</label>
               <input
                 type="date"
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
               />
-              <label>Até:</label>
+              <label>{t.statistics.to}</label>
               <input
                 type="date"
                 value={customEndDate}
@@ -191,47 +193,47 @@ export default function StatisticsPage() {
           )}
 
           <div className="filter-group">
-            <label>Projeto:</label>
+            <label>{t.statistics.project}</label>
             <input
               type="text"
-              placeholder="Todos"
+              placeholder={t.statistics.allProjects}
               value={projectFilter}
               onChange={(e) => setProjectFilter(e.target.value)}
             />
           </div>
 
           <div className="filter-group">
-            <label>Artista:</label>
+            <label>{t.statistics.artist}</label>
             <input
               type="text"
-              placeholder="Todos"
+              placeholder={t.statistics.allArtists}
               value={artistFilter}
               onChange={(e) => setArtistFilter(e.target.value)}
             />
           </div>
 
           <button onClick={fetchStatistics} disabled={loading}>
-            {loading ? "Carregando..." : "Atualizar"}
+            {loading ? t.status.loading : "Atualizar"}
           </button>
         </div>
 
         {loading ? (
-          <div className="loading">Carregando estatísticas...</div>
+          <div className="loading">{t.statistics.noData}</div>
         ) : stats ? (
           <>
             <section className="stats-grid">
               <div className="stat-card primary">
-                <h3>Total de Jobs</h3>
+                <h3>{t.statistics.totalJobs}</h3>
                 <strong className="big-number">{stats.jobs.total_jobs}</strong>
                 <div className="stat-details">
-                  <span className="success">{stats.jobs.completed} concluídos</span>
-                  <span className="failed">{stats.jobs.failed} falharam</span>
-                  <span className="cancelled">{stats.jobs.cancelled} cancelados</span>
+                  <span className="success">{stats.jobs.completed} {t.statistics.completed.toLowerCase()}</span>
+                  <span className="failed">{stats.jobs.failed} {t.statistics.failed.toLowerCase()}</span>
+                  <span className="cancelled">{stats.jobs.cancelled} {t.statistics.cancelled.toLowerCase()}</span>
                 </div>
               </div>
 
               <div className="stat-card">
-                <h3>Taxa de Sucesso</h3>
+                <h3>{t.statistics.successRate}</h3>
                 <strong className="big-number success">{stats.jobs.success_rate.toFixed(1)}%</strong>
                 <div className="stat-bar">
                   <div className="stat-bar-fill success" style={{ width: `${stats.jobs.success_rate}%` }} />
@@ -239,38 +241,38 @@ export default function StatisticsPage() {
               </div>
 
               <div className="stat-card">
-                <h3>Tempo Médio</h3>
+                <h3>{t.statistics.avgRenderTime}</h3>
                 <strong className="big-number">{formatDuration(stats.jobs.avg_render_time_seconds)}</strong>
                 <span className="sub">por job concluído</span>
               </div>
 
               <div className="stat-card">
-                <h3>Tempo Médio</h3>
+                <h3>{t.statistics.avgRenderTime}</h3>
                 <strong className="big-number">{formatDuration(stats.jobs.avg_render_time_seconds)}</strong>
                 <span className="sub">por job concluído</span>
               </div>
 
               <div className="stat-card">
-                <h3>Jobs Ativos</h3>
+                <h3>{t.statistics.running}</h3>
                 <strong className="big-number">{stats.jobs.running + stats.jobs.queued}</strong>
                 <div className="stat-details">
-                  <span>{stats.jobs.running} em execução</span>
-                  <span>{stats.jobs.queued} na fila</span>
+                  <span>{stats.jobs.running} {t.statistics.running.toLowerCase()}</span>
+                  <span>{stats.jobs.queued} {t.statistics.queued.toLowerCase()}</span>
                 </div>
               </div>
 
               <div className="stat-card">
-                <h3>Arquivos Renderizados</h3>
+                <h3>{t.statistics.filesSection}</h3>
                 <strong className="big-number">{stats.rendered_files.total_files}</strong>
                 <div className="stat-details">
-                  <span className="success">{stats.rendered_files.rendered_success} com sucesso</span>
-                  <span className="failed">{stats.rendered_files.rendered_failed} com falha</span>
+                  <span className="success">{stats.rendered_files.rendered_success} {t.statistics.renderedSuccess.toLowerCase()}</span>
+                  <span className="failed">{stats.rendered_files.rendered_failed} {t.statistics.renderedFailed.toLowerCase()}</span>
                 </div>
               </div>
             </section>
 
             <section className="section">
-              <h2>Status dos Jobs</h2>
+              <h2>{t.statistics.byStatus}</h2>
               <div className="status-bars">
                 {Object.entries(stats.jobs.by_status).map(([status, count]) => (
                   <div key={status} className="status-row">
@@ -288,7 +290,7 @@ export default function StatisticsPage() {
             </section>
 
             <section className="section">
-              <h2>Jobs por Projeto</h2>
+              <h2>{t.statistics.byProject}</h2>
               <div className="project-list">
                 {Object.entries(stats.jobs.by_project)
                   .sort((a, b) => b[1] - a[1])

@@ -580,9 +580,12 @@ export default function SpotinhoWidget() {
   });
   const [showSettings, setShowSettings] = useState(false);
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+  const [isSendingVoice, setIsSendingVoice] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const inputValueRef = useRef(inputValue);
+  const recognitionFinalRef = useRef<string>('');
 
   useEffect(() => {
     setMessages(loadMessages(language.code));
@@ -741,23 +744,31 @@ export default function SpotinhoWidget() {
     if (isListening) {
       recognitionRef.current?.stop();
       setIsListening(false);
+      setIsSendingVoice(false);
     } else {
+      recognitionFinalRef.current = '';
       const recognition = createSpeechRecognition(
         (transcript) => {
-          setInputValue(prev => prev + transcript);
+          inputValueRef.current = transcript;
           const lowerTranscript = transcript.toLowerCase();
           const sendWords = language.code === 'pt-BR'
             ? ['enviar', 'mandar', 'envia']
             : language.code === 'es-ES'
             ? ['enviar', 'mandar', 'envía']
             : ['send', 'submit', 'go'];
-          if (sendWords.some(w => lowerTranscript.includes(w))) {
-            sendMessage(inputValue + transcript);
+          if (!isSendingVoice && sendWords.some(w => lowerTranscript.includes(w))) {
+            setIsSendingVoice(true);
+            setInputValue(recognitionFinalRef.current);
+            sendMessage(recognitionFinalRef.current);
+          } else {
+            setInputValue(transcript);
+            recognitionFinalRef.current = transcript;
           }
         },
         (error) => {
           console.error('Speech recognition error:', error);
           setIsListening(false);
+          setIsSendingVoice(false);
         },
         language.code
       );
@@ -768,7 +779,7 @@ export default function SpotinhoWidget() {
         setIsListening(true);
       }
     }
-  }, [isListening, inputValue, language.code]);
+  }, [isListening, isSendingVoice, language.code]);
 
   const toggleCamera = async () => {
     if (mediaState.videoEnabled) {
