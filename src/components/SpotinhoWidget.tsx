@@ -109,6 +109,7 @@ function saveMessages(messages: Message[]) {
 
 export default function SpotinhoWidget() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -252,9 +253,25 @@ Se o problema persistir, entre em contato com o suporte. 😊`;
                 </span>
               </div>
             </div>
-            <button className="close-btn" onClick={() => setIsOpen(false)}>
-              ✕
-            </button>
+            <div className="header-actions">
+              <button
+                className="action-btn"
+                onClick={() => setIsExpanded(!isExpanded)}
+                title={isExpanded ? "Minimizar" : "Expandir"}
+              >
+                {isExpanded ? "➖" : "➕"}
+              </button>
+              <button
+                className="action-btn"
+                onClick={() => window.open("/chat", "_blank")}
+                title="Abrir em nova aba"
+              >
+                🔗
+              </button>
+              <button className="close-btn" onClick={() => setIsOpen(false)}>
+                ✕
+              </button>
+            </div>
           </div>
 
           <div className="chat-messages">
@@ -314,8 +331,11 @@ Se o problema persistir, entre em contato com o suporte. 😊`;
             <button className="suggestion-btn" onClick={() => handleSuggestionClick("Quais formatos são aceitos?")}>
               Formatos aceitos 📁
             </button>
+            <button className="suggestion-btn" onClick={() => handleSuggestionClick("Qual o status dos meus jobs?")}>
+              Status dos jobs 📊
+            </button>
             <button className="suggestion-btn" onClick={() => handleSuggestionClick("Ver estatísticas")}>
-              Ver estatísticas 📊
+              Ver estatísticas 📈
             </button>
           </div>
 
@@ -404,7 +424,8 @@ Se o problema persistir, entre em contato com o suporte. 😊`;
           bottom: 80px;
           right: 0;
           width: 400px;
-          height: 600px;
+          height: ${isExpanded ? "85" : "600"}vh;
+          max-height: ${isExpanded ? "85" : "600"}px;
           background: white;
           border-radius: 20px;
           box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
@@ -412,6 +433,11 @@ Se o problema persistir, entre em contato com o suporte. 😊`;
           flex-direction: column;
           overflow: hidden;
           animation: slideUp 0.3s ease;
+          transition: height 0.3s ease, max-height 0.3s ease;
+        }
+
+        .chat-window.expanded {
+          width: 600px;
         }
 
         @keyframes slideUp {
@@ -467,6 +493,30 @@ Se o problema persistir, entre em contato com o suporte. 😊`;
         }
 
         .close-btn:hover {
+          background: rgba(255,255,255,0.3);
+        }
+
+        .header-actions {
+          display: flex;
+          gap: 0.5rem;
+        }
+
+        .action-btn {
+          background: rgba(255,255,255,0.2);
+          border: none;
+          color: white;
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          cursor: pointer;
+          font-size: 0.9rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.2s;
+        }
+
+        .action-btn:hover {
           background: rgba(255,255,255,0.3);
         }
 
