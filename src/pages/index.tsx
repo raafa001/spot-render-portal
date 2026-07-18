@@ -100,9 +100,9 @@ export default function Home() {
                   <Link href="/statistics" className="quick-action">
                     📊 Estatísticas
                   </Link>
-                  <a href="/chat" className="quick-action spotinho-action">
+                  <Link href="/chat" className="quick-action spotinho-action">
                     🤖 Falar com Spotinho
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
