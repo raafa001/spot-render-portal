@@ -173,22 +173,9 @@ export async function getClientInfo(): Promise<ClientInfo> {
       info.language = langMap[data.country_code] || info.language;
     }
   } catch {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3000);
-      const fallback = await fetch('https://ipapi.co/json/', { signal: controller.signal });
-      clearTimeout(timeout);
-      if (fallback.ok) {
-        const data = await fallback.json();
-        info.ip = data.ip || '';
-        info.isp = data.org || '';
-        info.location = data.city ? `${data.city}, ${data.country}` : data.country || '';
-      }
-    } catch {
-      info.ip = 'Unable to determine';
-      info.location = 'Unknown';
-      info.isp = 'Unknown';
-    }
+    info.ip = 'Unable to determine';
+    info.location = 'Unknown';
+    info.isp = 'Unknown';
   }
 
   return info;
